@@ -8151,23 +8151,22 @@ BUILDIN_FUNC(setitemdroprate) {
 	int item_id = script_getnum(st, 2);
 	int rate = script_getnum(st, 3); // 100 = 1%, 1 = 0.01%
 
-	if (item_id <= 0 || item_id >= MAX_ITEMDB) {
+	if (item_id <= 0) {
 		ShowWarning("buildin_setitemdroprate: Invalid item ID %d.\n", item_id);
 		return SCRIPT_CMD_FAILURE;
 	}
 
-	// store in a runtime override table
-	// here we use an existing itemdb slot override
 	struct item_data* id = itemdb_search(item_id);
 	if (id) {
 		id->dropRate_override = rate;
 		ShowInfo("Drop rate for item %d set to %d (%.2f%%)\n", item_id, rate, rate / 100.0);
 	} else {
 		ShowWarning("buildin_setitemdroprate: Failed to find item ID %d.\n", item_id);
+		return SCRIPT_CMD_FAILURE;
 	}
+
 	return SCRIPT_CMD_SUCCESS;
 }
-
 
 /*==========================================
  * gets a random item ID from an item group [Skotlex]
