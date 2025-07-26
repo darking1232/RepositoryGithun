@@ -1118,6 +1118,8 @@ void ItemDatabase::loadingFinished(){
 	for (auto &tmp_item : item_db) {
 		std::shared_ptr<item_data> item = tmp_item.second;
 
+		item->dropRate_override = 0; // Initialize custom drop override by glemor
+
 		// Items that are consumed only after target confirmation
 		if (item->type == IT_DELAYCONSUME) {
 			item->type = IT_USABLE;

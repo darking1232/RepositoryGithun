@@ -3350,6 +3350,7 @@ struct item_data
 	uint16 armor_level;
 	t_itemid view_id;
 	uint16 elvmax; ///< Maximum level for this item
+	int dropRate_override; // custom runtime drop rate override (0 = use default)
 #ifdef RENEWAL
 	uint32 matk;
 #endif
