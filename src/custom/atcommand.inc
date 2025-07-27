@@ -17,3 +17,5 @@
 //	clif_specialeffect(&sd->bl, EF_HEARTCASTING, AREA);
 //	return 0;
 //}
+
+

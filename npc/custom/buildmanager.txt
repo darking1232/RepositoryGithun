@@ -1,0 +1,30 @@
+-	script	BuildManagerInit	-1,{
+
+OnInit:
+	query_sql("
+	CREATE TABLE IF NOT EXISTS `ero_buildmanager` (
+	  `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+	  `aid` INT(11) NOT NULL DEFAULT '0',
+	  `cid` INT(11) NOT NULL DEFAULT '0',
+	  `build_name` VARCHAR(255) NOT NULL DEFAULT '',
+	  `eaj_class` SMALLINT(6) UNSIGNED NOT NULL DEFAULT '0',
+	  `base_level` SMALLINT(6) UNSIGNED NOT NULL DEFAULT '1',
+	  `job_level` SMALLINT(6) UNSIGNED NOT NULL DEFAULT '1',
+	  `str` SMALLINT(4) UNSIGNED NOT NULL DEFAULT '0',
+	  `agi` SMALLINT(4) UNSIGNED NOT NULL DEFAULT '0',
+	  `vit` SMALLINT(4) UNSIGNED NOT NULL DEFAULT '0',
+	  `int` SMALLINT(4) UNSIGNED NOT NULL DEFAULT '0',
+	  `dex` SMALLINT(4) UNSIGNED NOT NULL DEFAULT '0',
+	  `luk` SMALLINT(4) UNSIGNED NOT NULL DEFAULT '0',
+	  `status_point` INT(11) UNSIGNED NOT NULL DEFAULT '0',
+	  `skill_point` INT(11) UNSIGNED NOT NULL DEFAULT '0',
+	  `trait_point` INT(11) UNSIGNED NOT NULL DEFAULT '0',
+	  `created` DATETIME DEFAULT NULL,
+	  PRIMARY KEY (`id`),
+	  INDEX (`aid`),
+	  INDEX (`cid`)
+	) ENGINE=MyISAM;
+	");
+
+	end;
+}

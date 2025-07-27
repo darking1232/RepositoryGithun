@@ -8078,6 +8078,7 @@ ACMD_FUNC(mobinfo)
 				sprintf(atcmd_output2, " - %s  %02.02f%%", item_db.create_item_link( id ).c_str(), (float)droprate / 100);
 				strcat(atcmd_output, atcmd_output2);
 
+
 // Show override drop rate to GMs by Glemor (group_id 99+)
 if (sd->group_id >= 99 && id->dropRate_override > 0) {
     char gm_msg[CHAT_SIZE_MAX];
@@ -8140,6 +8141,10 @@ if (sd->group_id >= 99 && id->dropRate_override > 0) {
 	}
 	return 0;
 }
+
+
+
+
 
 /*=========================================
 * @showmobs by KarLaeda
