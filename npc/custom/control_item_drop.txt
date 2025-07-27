@@ -1,0 +1,33 @@
+-	script	DropRateMonitor	-1,{
+
+OnInit:
+	set .card_id, 4001;	     // Replace with desired Card ID
+	set .threshold, 100;
+	set .original_rate, 1000;  // 1.00%
+	set .reduced_rate, 1;     // 0.01%
+	initnpctimer;
+	end;
+
+OnTimer60000:
+	set .@total, 0;
+
+	query_sql("SELECT IFNULL(SUM(amount),0) FROM inventory WHERE nameid = "+.card_id+";", .@a);
+	.@total += .@a;
+	query_sql("SELECT IFNULL(SUM(amount),0) FROM cart_inventory WHERE nameid = "+.card_id+";", .@a);
+	.@total += .@a;
+	query_sql("SELECT IFNULL(SUM(amount),0) FROM storage WHERE nameid = "+.card_id+";", .@a);
+	.@total += .@a;
+	query_sql("SELECT IFNULL(SUM(amount),0) FROM guild_storage WHERE nameid = "+.card_id+";", .@a);
+	.@total += .@a;
+
+	if (.@total >= .threshold) {
+		setitemdroprate(.card_id, .reduced_rate);
+		announce "Drop rate lowered to 0.01% for item ID " + .card_id + " (currently "+.@total+" in circulation)", bc_all;
+	} else {
+		setitemdroprate(.card_id, .original_rate);
+		announce "Drop rate restored to 1.00% for item ID " + .card_id + " (currently "+.@total+" in circulation)", bc_all;
+	}
+
+	initnpctimer; // ?? Re-arm timer
+	end;
+}
