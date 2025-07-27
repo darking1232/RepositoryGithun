@@ -3,7 +3,6 @@
 
 #include "sql.hpp"
 
-Sql* sql_handle = NULL; // for buildset
 #include <cstdlib>// strtoul
 
 #include "cbasetypes.hpp"
