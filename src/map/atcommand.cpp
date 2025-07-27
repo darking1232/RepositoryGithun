@@ -8765,8 +8765,10 @@ ACMD_FUNC(rates)
 	char buf[CHAT_SIZE_MAX];
 	bool isvip = pc_isvip(sd);
 
-	// -- Server name header --
+	// -- Server name header -- by Glemor
 	snprintf(buf, sizeof(buf), "-- Server Rates for ReviseRO --");
+	clif_displaymessage(sd->fd, buf); 
+
 	// -- EXP Rates --
 	float base_exp = (battle_config.base_exp_rate + (isvip ? (battle_config.vip_base_exp_increase * battle_config.base_exp_rate) / 100 : 0)) / 100.0;
 	float job_exp = (battle_config.job_exp_rate + (isvip ? (battle_config.vip_job_exp_increase * battle_config.job_exp_rate) / 100 : 0)) / 100.0;
