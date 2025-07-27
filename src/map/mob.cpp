@@ -3315,39 +3315,44 @@ int32 mob_dead(struct mob_data *md, struct block_list *src, int32 type)
 		}
 
 		// Regular mob drops drop after script-granted drops
-		for( const std::shared_ptr<s_mob_drop>& entry : md->db->dropitem ){
-			if (entry->nameid == 0)
-				continue;
+for( const std::shared_ptr<s_mob_drop>& entry : md->db->dropitem ){
+	if (entry->nameid == 0)
+		continue;
 
-			std::shared_ptr<item_data> it = item_db.find(entry->nameid);
+	std::shared_ptr<item_data> it = item_db.find(entry->nameid);
+	if (it == nullptr)
+		continue;
 
-			if (it == nullptr)
-				continue;
+	drop_rate = mob_getdroprate(src, md->db, entry->rate, drop_modifier, md);
 
-			drop_rate = mob_getdroprate(src, md->db, entry->rate, drop_modifier, md);
+	// ? Check for NPC-controlled override by Glemor
+	if (it->dropRate_override > 0) {
+		drop_rate = it->dropRate_override;
+	}
 
-			// attempt to drop the item
-			if (rnd() % 10000 >= drop_rate)
-				continue;
+	// attempt to drop the item
+	if (rnd() % 10000 >= drop_rate)
+		continue;
 
-			if (first_sd != nullptr && it->type == IT_PETEGG) {
-				pet_create_egg(first_sd, entry->nameid);
-				continue;
-			}
+	if (first_sd != nullptr && it->type == IT_PETEGG) {
+		pet_create_egg(first_sd, entry->nameid);
+		continue;
+	}
 
-			std::shared_ptr<s_item_drop> ditem = mob_setdropitem(entry, 1, md->mob_id);
+	std::shared_ptr<s_item_drop> ditem = mob_setdropitem(entry, 1, md->mob_id);
 
-			//A Rare Drop Global Announce by Lupus
-			if (first_sd != nullptr && entry->rate <= battle_config.rare_drop_announce) {
-				char message[128];
-				sprintf(message, msg_txt(nullptr, 541), first_sd->status.name, md->name, it->ename.c_str(), (float)drop_rate / 100);
-				//MSG: "'%s' won %s's %s (chance: %0.02f%%)"
-				intif_broadcast(message, strlen(message) + 1, BC_DEFAULT);
-			}
-			// Announce first, or else ditem will be freed. [Lance]
-			// By popular demand, use base drop rate for autoloot code. [Skotlex]
-			mob_item_drop(md, dlist, ditem, 0, battle_config.autoloot_adjust ? drop_rate : entry->rate, homkillonly || merckillonly);
-		}
+	// A Rare Drop Global Announce by Lupus
+	if (first_sd != nullptr && entry->rate <= battle_config.rare_drop_announce) {
+		char message[128];
+		sprintf(message, msg_txt(nullptr, 541), first_sd->status.name, md->name, it->ename.c_str(), (float)drop_rate / 100);
+		// MSG: "'%s' won %s's %s (chance: %0.02f%%)"
+		intif_broadcast(message, strlen(message) + 1, BC_DEFAULT);
+	}
+
+	// Announce first, or else ditem will be freed. [Lance]
+	// By popular demand, use base drop rate for autoloot code. [Skotlex]
+	mob_item_drop(md, dlist, ditem, 0, battle_config.autoloot_adjust ? drop_rate : entry->rate, homkillonly || merckillonly);
+}
 
 		// Ore Discovery (triggers if owner has loot priority, does not require to be the killer)
 		if (first_sd != nullptr && pc_checkskill(first_sd, BS_FINDINGORE) > 0) {
