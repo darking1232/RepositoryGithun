@@ -8077,6 +8077,13 @@ ACMD_FUNC(mobinfo)
 
 				sprintf(atcmd_output2, " - %s  %02.02f%%", item_db.create_item_link( id ).c_str(), (float)droprate / 100);
 				strcat(atcmd_output, atcmd_output2);
+
+// Show override drop rate to GMs by Glemor (group_id 99+)
+if (sd->group_id >= 99 && id->dropRate_override > 0) {
+    char gm_msg[CHAT_SIZE_MAX];
+    sprintf(gm_msg, " ? [GM] Override Drop Rate: %.2f%% (Item ID: %d)", id->dropRate_override / 100.0f, id->nameid);
+    clif_displaymessage(fd, gm_msg);
+}
 				if (++j % 3 == 0) {
 					clif_displaymessage(fd, atcmd_output);
 					strcpy(atcmd_output, " ");
