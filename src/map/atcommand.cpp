@@ -8763,40 +8763,39 @@ ACMD_FUNC(mutearea)
 ACMD_FUNC(rates)
 {
 	char buf[CHAT_SIZE_MAX];
+	bool isvip = pc_isvip(sd);
 
-	nullpo_ret(sd);
-	memset(buf, '\0', sizeof(buf));
+	// -- Server name header --
+	snprintf(buf, sizeof(buf), "-- Server Rates for ReviseRO --");
+	// -- EXP Rates --
+	float base_exp = (battle_config.base_exp_rate + (isvip ? (battle_config.vip_base_exp_increase * battle_config.base_exp_rate) / 100 : 0)) / 100.0;
+	float job_exp = (battle_config.job_exp_rate + (isvip ? (battle_config.vip_job_exp_increase * battle_config.job_exp_rate) / 100 : 0)) / 100.0;
+	float quest_exp = battle_config.quest_exp_rate / 100.0;
 
-	snprintf(buf, CHAT_SIZE_MAX, msg_txt(sd,1298), // Experience rates: Base %.2fx / Job %.2fx
-		(battle_config.base_exp_rate + (pc_isvip(sd) ? (battle_config.vip_base_exp_increase * battle_config.base_exp_rate) / 100 : 0)) / 100.,
-		(battle_config.job_exp_rate + (pc_isvip(sd) ? (battle_config.vip_job_exp_increase * battle_config.job_exp_rate) / 100 : 0)) / 100.);
-	clif_displaymessage(fd, buf);
-	snprintf(buf, CHAT_SIZE_MAX, msg_txt(sd,1299), // Normal Drop Rates: Common %.2fx / Healing %.2fx / Usable %.2fx / Equipment %.2fx / Card %.2fx
-		(battle_config.item_rate_common + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_common) / 100 : 0)) / 100.,
-		(battle_config.item_rate_heal + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_heal) / 100 : 0)) / 100.,
-		(battle_config.item_rate_use + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_use) / 100 : 0)) / 100.,
-		(battle_config.item_rate_equip + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_equip) / 100 : 0)) / 100.,
-		(battle_config.item_rate_card + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_card) / 100 : 0)) / 100.);
-	clif_displaymessage(fd, buf);
-	snprintf(buf, CHAT_SIZE_MAX, msg_txt(sd,1300), // Boss Drop Rates: Common %.2fx / Healing %.2fx / Usable %.2fx / Equipment %.2fx / Card %.2fx
-		(battle_config.item_rate_common_boss + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_common_boss) / 100 : 0)) / 100.,
-		(battle_config.item_rate_heal_boss + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_heal_boss) / 100 : 0)) / 100.,
-		(battle_config.item_rate_use_boss + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_use_boss) / 100 : 0)) / 100.,
-		(battle_config.item_rate_equip_boss + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_equip_boss) / 100 : 0)) / 100.,
-		(battle_config.item_rate_card_boss + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_card_boss) / 100 : 0)) / 100.);
-	clif_displaymessage(fd, buf);
-	snprintf(buf, CHAT_SIZE_MAX, msg_txt(sd,1024), // MVP Drop Rates: Common %.2fx / Healing %.2fx / Usable %.2fx / Equipment %.2fx / Card %.2fx
-		(battle_config.item_rate_common_mvp + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_common_mvp) / 100 : 0)) / 100.,
-		(battle_config.item_rate_heal_mvp + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_heal_mvp) / 100 : 0)) / 100.,
-		(battle_config.item_rate_use_mvp + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_use_mvp) / 100 : 0)) / 100.,
-		(battle_config.item_rate_equip_mvp + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_equip_mvp) / 100 : 0)) / 100.,
-		(battle_config.item_rate_card_mvp + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_card_mvp) / 100 : 0)) / 100.);
-	clif_displaymessage(fd, buf);
-	snprintf(buf, CHAT_SIZE_MAX, msg_txt(sd,1301), // Other Drop Rates: MvP %.2fx / Card-Based %.2fx / Treasure %.2fx
-		(battle_config.item_rate_mvp + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_mvp) / 100 : 0)) / 100.,
-		(battle_config.item_rate_adddrop + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_adddrop) / 100 : 0)) / 100.,
-		(battle_config.item_rate_treasure + (pc_isvip(sd) ? (battle_config.vip_drop_increase * battle_config.item_rate_treasure) / 100 : 0)) / 100.);
-	clif_displaymessage(fd, buf);
+	snprintf(buf, sizeof(buf), "Base Level: %.2fx | Job Level: %.2fx | Quest Exp: %.2fx", base_exp, job_exp, quest_exp);
+	clif_displaymessage(sd->fd, buf);
+
+	// -- Normal Drop Rates --
+	int common = battle_config.item_rate_common + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_common) / 100 : 0);
+	int heal   = battle_config.item_rate_heal   + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_heal) / 100 : 0);
+	int usable = battle_config.item_rate_use    + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_use) / 100 : 0);
+
+	snprintf(buf, sizeof(buf), "Common | Healing | Usable: %dx", common); // optional: include heal/usable
+	clif_displaymessage(sd->fd, buf);
+
+	// -- Equipment --
+	int equip = battle_config.item_rate_equip + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_equip) / 100 : 0);
+	int equip_mvp = battle_config.item_rate_equip_mvp + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_equip_mvp) / 100 : 0);
+	snprintf(buf, sizeof(buf), "Normal Equipment: %dx | MVP Equipment: %dx%s (Modified)", equip, equip_mvp, (equip_mvp != 100) ? " (Modified)" : "");
+	clif_displaymessage(sd->fd, buf);
+
+	// -- Card Rates --
+	float card = (battle_config.item_rate_card + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_card) / 10000 : 0)) / 10000.0;
+	float card_mvp = (battle_config.item_rate_card_mvp + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_card_mvp) / 10000 : 0)) / 10000.0;
+	float card_boss = (battle_config.item_rate_card_boss + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_card_boss) / 10000 : 0)) / 10000.0;
+
+	snprintf(buf, sizeof(buf), "Normal Card: %.2f%% | MVP Card: %.2f%% | Rare Card: %.2f%% | Other Bonus: 1000x", card, card_boss, card_mvp);
+	clif_displaymessage(sd->fd, buf);
 
 	return 0;
 }

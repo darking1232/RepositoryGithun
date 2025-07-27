@@ -45,16 +45,20 @@ prontera,200,300,4	script	DropRateMonitor	811,{
 			if (.@total >= .threshold) {
 				setitemdroprate(.@card_id, .reduced_rate);
 				query_sql("REPLACE INTO drop_rate_overrides (item_id, override_rate, circulating_count) VALUES (" + .@card_id + ", " + .reduced_rate + ", " + .@total + ")");
-				announce "[" + getitemname(.@card_id) + "] drop rate lowered to 0.01% (Circulating: " + .@total + ")", bc_all;
+				//announce "[" + getitemname(.@card_id) + "] drop rate lowered to 0.01% (Circulating: " + .@total + ")", bc_all;
 			} else {
 				setitemdroprate(.@card_id, .original_rate);
 				query_sql("DELETE FROM drop_rate_overrides WHERE item_id = " + .@card_id);
-				announce "[" + getitemname(.@card_id) + "] drop rate restored to 1.00% (Circulating: " + .@total + ")", bc_all;
+				//announce "[" + getitemname(.@card_id) + "] drop rate restored to 1.00% (Circulating: " + .@total + ")", bc_all;
 			}
 		}
 		return;
 
 	OnWhisperGlobal:
+	if (getgmlevel() < 99) {
+		dispbottom "[Drop Rate Monitor] Only GM level 99 can use this function.";
+		end;
+	}
 		query_sql("SELECT item_id, circulating_count FROM drop_rate_overrides", .@id, .@qty);
 
 		if (getarraysize(.@id) == 0) {
