@@ -615,6 +615,7 @@ ACMD_FUNC(remove)
 		}
 		pc_setfalcon(sd, 0);
 		clif_displaymessage(fd, "Falcon removed.");
+		return true;
 	}
 	else if (strcmp(message, "pet") == 0) {
 		if (sd->pd) {
