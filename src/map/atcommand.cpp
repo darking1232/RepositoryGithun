@@ -597,6 +597,7 @@ ACMD_FUNC(remove)
 			return false;
 		}
 		clif_displaymessage(fd, "Cart removed.");
+		return true;
 	}
 	else if (strcmp(message, "mount") == 0) {
 		if (!pc_isriding(sd)) {
@@ -605,6 +606,7 @@ ACMD_FUNC(remove)
 		}
 		pc_setriding(sd, 0);
 		clif_displaymessage(fd, "Mount removed.");
+		return true;
 	}
 	else if (strcmp(message, "falcon") == 0) {
 		if (!pc_isfalcon(sd)) {
@@ -618,6 +620,7 @@ ACMD_FUNC(remove)
 		if (sd->pd) {
 			pet_return_egg(sd, sd->pd);  // ? corrected
 			clif_displaymessage(fd, "Pet removed.");
+			return true;
 		} else {
 			clif_displaymessage(fd, "You don't have a pet.");
 			return false;
@@ -628,6 +631,7 @@ ACMD_FUNC(remove)
 		if (sd->hd) {
 			hom_delete(sd->hd);
 			clif_displaymessage(fd, "Homunculus removed.");
+			return true;
 		} else {
 			clif_displaymessage(fd, "You don't have a homunculus.");
 			return false;
