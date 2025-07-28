@@ -63,6 +63,7 @@ Body:
       # Informational commands
       commands: true
       charcommands: true
+      buildmanager: true
       help: true
       rates: true
       uptime: true
