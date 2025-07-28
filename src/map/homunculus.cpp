@@ -52,6 +52,17 @@ const std::string HomExpDatabase::getDefaultLocation() {
 	return std::string(db_path) + "/exp_homun.yml";
 }
 
+// added for @remove command
+#ifdef __cplusplus
+extern "C" {
+#endif
+int32 hom_delete(struct homun_data *hd);
+#ifdef __cplusplus
+}
+#endif
+
+
+
 uint64 HomExpDatabase::parseBodyNode(const ryml::NodeRef& node) {
 	if (!this->nodesExist(node, { "Level", "Exp" })) {
 		return 0;

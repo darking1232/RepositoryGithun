@@ -92,6 +92,9 @@ Body:
       breakguild: true
       channel: true
       langtype: true
+      me: true
+      remove: true
+      time: true
     Permissions:
       attendance: false
   - Id: 2
@@ -160,7 +163,6 @@ Body:
       gvgon: true
       gvgoff: true
       allowks: true
-      me: true
       marry: true
       divorce: true
       refreshall: true

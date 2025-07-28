@@ -247,4 +247,14 @@ int16 hom_skill_get_index(uint16 skill_id);
 void do_final_homunculus(void);
 void do_init_homunculus(void);
 
+// for @remove command
+#ifdef __cplusplus
+extern "C" {
+#endif
+int32 hom_delete(struct homun_data *hd);
+#ifdef __cplusplus
+}
+#endif
+
+
 #endif /* HOMUNCULUS_HPP */

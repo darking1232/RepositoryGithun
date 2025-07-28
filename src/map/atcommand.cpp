@@ -581,6 +581,71 @@ static void warp_get_suggestions(map_session_data* sd, const char *name) {
 
 	clif_displaymessage(sd->fd, buffer);
 }
+/*==========================================
+ * @remove <cart/mount/falcon/pet/homun/> by glemor
+ *------------------------------------------*/
+ACMD_FUNC(remove)
+{
+	if (!message || !*message) {
+		clif_displaymessage(fd, "Usage: @remove <cart/mount/falcon/pet/homun>");
+		return false;
+	}
+
+	if (strcmp(message, "cart") == 0) {
+		if (!pc_setcart(sd, 0)) {
+			clif_displaymessage(fd, "You do not have a cart.");
+			return false;
+		}
+		clif_displaymessage(fd, "Cart removed.");
+	}
+	else if (strcmp(message, "mount") == 0) {
+		if (!pc_isriding(sd)) {
+			clif_displaymessage(fd, "You are not mounted.");
+			return false;
+		}
+		pc_setriding(sd, 0);
+		clif_displaymessage(fd, "Mount removed.");
+	}
+	else if (strcmp(message, "falcon") == 0) {
+		if (!pc_isfalcon(sd)) {
+			clif_displaymessage(fd, "You don't have a falcon.");
+			return false;
+		}
+		pc_setfalcon(sd, 0);
+		clif_displaymessage(fd, "Falcon removed.");
+	}
+	else if (strcmp(message, "pet") == 0) {
+		if (sd->pd) {
+			pet_return_egg(sd, sd->pd);  // ? corrected
+			clif_displaymessage(fd, "Pet removed.");
+		} else {
+			clif_displaymessage(fd, "You don't have a pet.");
+			return false;
+		}
+	}
+	else if (strcmp(message, "homun") == 0) {
+#if PACKETVER >= 20150513
+		if (sd->hd) {
+			hom_delete(sd->hd);
+			clif_displaymessage(fd, "Homunculus removed.");
+		} else {
+			clif_displaymessage(fd, "You don't have a homunculus.");
+			return false;
+		}
+#else
+		clif_displaymessage(fd, "Homunculus system is disabled on this server.");
+		return false;
+#endif
+	}
+	else {
+		clif_displaymessage(fd, "Invalid option to remove. (Usage: @remove <cart/mount/falcon/pet/homun>)");
+		return false;
+	}
+
+	return true;
+}
+
+
 
 /*==========================================
  * @rura, @warp, @mapmove
@@ -11409,6 +11474,7 @@ void atcommand_basecommands(void) {
 	 **/
 	AtCommandInfo atcommand_base[] = {
 #include <custom/atcommand_def.inc>
+		ACMD_DEF(remove),
 		ACMD_DEF(mapmove),
 		ACMD_DEF(where),
 		ACMD_DEF(jumpto),
