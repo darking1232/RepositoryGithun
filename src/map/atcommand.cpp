@@ -581,6 +581,16 @@ static void warp_get_suggestions(map_session_data* sd, const char *name) {
 
 	clif_displaymessage(sd->fd, buffer);
 }
+
+/*==========================================
+ * dummy build manager by glemor
+ *------------------------------------------*/
+
+ACMD_FUNC(buildmanager) {
+    clif_displaymessage(fd, "This command is handled by an NPC script.");
+    return 0;
+}
+
 /*==========================================
  * @remove <cart/mount/falcon/pet/homun/> by glemor
  *------------------------------------------*/
@@ -11483,6 +11493,7 @@ void atcommand_basecommands(void) {
 	 **/
 	AtCommandInfo atcommand_base[] = {
 #include <custom/atcommand_def.inc>
+		ACMD_DEF(buildmanager),
 		ACMD_DEF(remove),
 		ACMD_DEF(mapmove),
 		ACMD_DEF(where),

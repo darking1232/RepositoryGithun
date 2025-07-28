@@ -94,7 +94,6 @@ Body:
       langtype: true
       me: true
       remove: true
-      time: true
     Permissions:
       attendance: false
   - Id: 2
