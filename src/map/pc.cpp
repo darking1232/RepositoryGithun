@@ -6120,6 +6120,11 @@ bool pc_dropitem(map_session_data *sd,int32 n,int32 amount)
 		clif_displaymessage (sd->fd, msg_txt(sd,271));
 		return false; //Can't drop items in nodrop mapflag maps.
 	}
+	if( sd->state.protection_acc )
+	{
+		clif_displaymessage(sd->fd, msg_txt(sd,4000));
+		return false;
+	}
 
 	if( !pc_candrop(sd,&sd->inventory.u.items_inventory[n]) )
 	{
@@ -6508,6 +6513,11 @@ int32 pc_useitem(map_session_data *sd,int32 n)
 
 	run_script(script,0,sd->id,fake_nd->id);
 	potion_flag = 0;
+
+
+	if( pc_readaccountreg(sd, add_str("#BLOCKPASS")) > 0 )
+		sd->state.protection_acc = 1;
+
 	return 1;
 }
 
@@ -6534,6 +6544,11 @@ enum e_additem_result pc_cart_additem(map_session_data *sd,struct item *item,int
 		return ADDITEM_INVALID;
 
 	data = itemdb_search(item->nameid);
+	if( sd->state.protection_acc )
+	{
+		clif_displaymessage(sd->fd, msg_txt(sd,4000));
+		return ADDITEM_INVALID;
+	}
 
 	if( data->stack.cart && amount > data->stack.amount )
 	{// item stack limitation

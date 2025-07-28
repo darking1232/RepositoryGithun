@@ -36,9 +36,17 @@ void trade_traderequest(map_session_data *sd, map_session_data *target_sd)
 		clif_displaymessage (sd->fd, msg_txt(sd,272));
 		return; //Can't trade in notrade mapflag maps.
 	}
+	if( sd->state.protection_acc ) {
+		clif_displaymessage(sd->fd, msg_txt(sd,4000));
+		return;
+	}
 
 	if (target_sd == nullptr || sd == target_sd) {
 		clif_traderesponse(*sd, TRADE_ACK_CHARNOTEXIST);
+		return;
+	}
+	if( sd->state.protection_acc ) {
+		clif_displaymessage(sd->fd, msg_txt(sd,4000));
 		return;
 	}
 
@@ -69,10 +77,18 @@ void trade_traderequest(map_session_data *sd, map_session_data *target_sd)
 		clif_traderesponse(*sd, TRADE_ACK_FAILED); // person is in another trade
 		return;
 	}
+	if( sd->state.protection_acc ) {
+		clif_displaymessage(sd->fd, msg_txt(sd,4000));
+		return;
+	}
 
 	if (!pc_can_give_items(sd) || !pc_can_give_items(target_sd)) { // check if both GMs are allowed to trade
 		clif_displaymessage( sd->fd, msg_txt( sd, 246 ) ); // Your GM level doesn't authorize you to perform this action.
 		clif_traderesponse(*sd, TRADE_ACK_FAILED); // GM is not allowed to trade
+		return;
+	}
+	if( sd->state.protection_acc ) {
+		clif_displaymessage(sd->fd, msg_txt(sd,4000));
 		return;
 	}
 
@@ -81,6 +97,10 @@ void trade_traderequest(map_session_data *sd, map_session_data *target_sd)
 	    (sd->m != target_sd->m || !check_distance_bl(sd, target_sd, TRADE_DISTANCE))) {
 		clif_traderesponse(*sd, TRADE_ACK_TOOFAR);
 		return ;
+	}
+	if( sd->state.protection_acc ) {
+		clif_displaymessage(sd->fd, msg_txt(sd,4000));
+		return;
 	}
 
 	target_sd->trade_partner.id = sd->status.account_id;

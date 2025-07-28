@@ -333,6 +333,12 @@ int32 storage_delitem(map_session_data* sd, struct s_storage *stor, int32 index,
  */
 void storage_storageadd(map_session_data* sd, struct s_storage *stor, int32 index, int32 amount)
 {
+	if( sd->state.protection_acc )
+	{
+		clif_displaymessage(sd->fd, msg_txt(sd,4000));
+		return;
+	}
+
 	enum e_storage_add result;
 
 	nullpo_retv(sd);
@@ -748,6 +754,11 @@ bool storage_guild_additem(map_session_data* sd, struct s_storage* stor, struct 
 
 	if ((item_data->bound == BOUND_ACCOUNT || item_data->bound > BOUND_GUILD) && !pc_can_give_bounded_items(sd)) {
 		clif_displaymessage(sd->fd, msg_txt(sd,294));
+		return false;
+	}
+	if( sd->state.protection_acc )
+	{
+		clif_displaymessage(sd->fd, msg_txt(sd,4000));
 		return false;
 	}
 

@@ -12176,6 +12176,11 @@ void clif_parse_NpcBuySellSelected( int32 fd, map_session_data* sd ){
 	if (sd->state.trading)
 		return;
 
+	if( sd->state.protection_acc ) {
+		clif_displaymessage(sd->fd, msg_txt(sd,4000));
+		return;
+	}
+
 	npc_buysellsel( sd, p->GID, p->type );
 }
 
@@ -12213,7 +12218,10 @@ void clif_parse_NpcBuyListSend( int32 fd, map_session_data* sd ){
 
 	if( sd->state.trading || !sd->npc_shopid )
 		result = e_purchase_result::PURCHASE_FAIL_MONEY;
-	else{
+	else if( sd->state.protection_acc ) {
+		clif_displaymessage(sd->fd, msg_txt(sd,4000));
+		result = e_purchase_result::PURCHASE_FAIL_MONEY;
+	} else {
 		std::vector<s_npc_buy_list> items = {};
 
 		items.reserve( n );
@@ -12233,7 +12241,6 @@ void clif_parse_NpcBuyListSend( int32 fd, map_session_data* sd ){
 	sd->npc_shopid = 0; //Clear shop data.
 	clif_npc_buy_result(sd, result);
 }
-
 
 /// Notification about the result of a sell attempt to an NPC shop (ZC_PC_SELL_RESULT).
 /// 00cb <result>.B
@@ -14155,7 +14162,10 @@ void clif_parse_OpenVending(int32 fd, map_session_data* sd){
 		clif_displaymessage (sd->fd, msg_txt(sd,204)); // "You can't open a shop on this cell."
 		return;
 	}
-
+if( sd->state.protection_acc ) {
+	clif_displaymessage(sd->fd, msg_txt(sd,4000));
+	return;
+}
 	if( message[0] == '\0' ) // invalid input
 		return;
 
@@ -16974,6 +16984,11 @@ void clif_parse_Auction_register( int32 fd, map_session_data* sd ){
 	if( !battle_config.feature_auction )
 		return;
 
+if( sd->state.protection_acc ) {
+	clif_Auction_message(fd, 2); // The auction has been canceled
+	clif_displaymessage(sd->fd, msg_txt(sd,4000));
+	return;
+}
 	auction.price = p->now_money;
 	auction.buynow = p->max_money;
 	auction.hours = p->hours;
@@ -17073,7 +17088,11 @@ void clif_parse_Auction_close(int32 fd, map_session_data *sd){
 void clif_parse_Auction_bid( int32 fd, map_session_data* sd ){
 #if PACKETVER >= 20050718
 	const PACKET_CZ_AUCTION_BUY* p = reinterpret_cast<PACKET_CZ_AUCTION_BUY*>( RFIFOP( fd, 0 ) );
-
+if( sd->state.protection_acc ) {
+	clif_Auction_message(fd, 2); // The auction has been canceled
+	clif_displaymessage(sd->fd, msg_txt(sd,4000));
+	return;
+}
 	if( !pc_can_give_items(sd) ){
 		clif_displaymessage( sd->fd, msg_txt( sd, 246 ) ); // Your GM level doesn't authorize you to perform this action.
 		return;
@@ -17163,7 +17182,10 @@ void clif_cashshop_open( map_session_data* sd, int32 tab ){
 void clif_parse_cashshop_open_request( int32 fd, map_session_data* sd ){
 #if PACKETVER_MAIN_NUM >= 20101123 || PACKETVER_RE_NUM >= 20120328 || defined(PACKETVER_ZERO)
 	nullpo_retv( sd );
-
+	if( sd->state.protection_acc ) {
+		clif_displaymessage(fd, msg_txt(sd,4000));
+		return;
+	}
 	int32 tab = 0;
 
 #if PACKETVER >= 20191224

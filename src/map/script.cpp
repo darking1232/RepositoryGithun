@@ -8145,6 +8145,28 @@ BUILDIN_FUNC(getnameditem)
 	script_pushint(st,1);
 	return SCRIPT_CMD_SUCCESS;
 }
+/*==========================================
+ * Account Protection - [Orce brAthena]
+ *------------------------------------------*/
+BUILDIN_FUNC(block) {
+    struct map_session_data* sd = nullptr;
+    if (!script_rid2sd(sd))
+        return SCRIPT_CMD_SUCCESS;
+
+    int value = script_getnum(st, 2);
+    sd->state.protection_acc = (value != 0);
+
+    return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(blockcheck) {
+    struct map_session_data* sd = nullptr;
+    if (!script_rid2sd(sd))
+        return SCRIPT_CMD_SUCCESS;
+
+    script_pushint(st, sd->state.protection_acc);
+    return SCRIPT_CMD_SUCCESS;
+}
 
 //set specific item drop by glemor
 BUILDIN_FUNC(setitemdroprate) {
@@ -27876,6 +27898,8 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(rentitem2,"viiiiiiii?"),
 	BUILDIN_DEF(getitem2,"viiiiiiii?"),
 	BUILDIN_DEF(getnameditem,"vv"),
+	BUILDIN_DEF(block,"i"), // Account Protection
+	BUILDIN_DEF(blockcheck,""), // Account Protection
 	BUILDIN_DEF(setitemdroprate, "ii"),
 	BUILDIN_DEF2(grouprandomitem,"groupranditem","i?"),
 	BUILDIN_DEF(makeitem,"visii?"),

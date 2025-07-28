@@ -443,6 +443,7 @@ public:
 		bool pc_loaded; // Ensure inventory data and status data is loaded before we calculate player stats
 		bool keepshop; // Whether shop data should be removed when the player disconnects
 		bool mail_writing; // Whether the player is currently writing a mail in RODEX or not
+		unsigned int protection_acc : 1; // Account Protection - [Orce brAthena]
 		bool cashshop_open;
 		bool sale_open;
 		bool stylist_open;

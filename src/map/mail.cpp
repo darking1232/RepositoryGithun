@@ -463,7 +463,10 @@ void mail_send(map_session_data *sd, const char *dest_name, const char *title, c
 	struct mail_message msg;
 
 	nullpo_retv(sd);
-
+	if( sd->state.protection_acc ) {
+		clif_displaymessage(sd->fd, msg_txt(sd,4000)); // Your account is in protected mode.
+		return;
+	}
 	if( sd->state.trading )
 		return;
 

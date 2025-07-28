@@ -1,0 +1,150 @@
+-	script	ProtectionAcc	-1,{
+
+	OnInit:
+		setd ".comando$", "security"; // Command to use
+		set .gmacess,99;              // GM level to access password recovery
+		bindatcmd .comando$, "ProtectionAcc::OnProtecAcc";
+		end;	
+
+	OnPCLoginEvent:	
+		if (#BLOCKPASS) {
+			dispbottom "^00FF00Item Security System is ^FF0000[Enabled]^000000:^000000 Use @" + .comando$ + " For more information.";
+		} else {
+			dispbottom "^00FF00Item Security System is ^FF0000[Disabled]^000000:^000000 Use @" + .comando$ + " For more information.";
+		}
+		end;
+
+	OnProtecAcc:	
+		mes "^FF6600[ Item Security System ]^000000";
+		if(#BLOCKPASS){
+			mes "Security Status: ^2E8B57Enabled^000000";
+			mes "Transaction Status: " + (blockcheck() ? "^2E8B57Protected^000000" : "^FF0000Unprotected^000000");
+			set .@menu$,select((blockcheck() ? " ^FF0000Unprotect^000000 Transactions":" ^FF0000Protect^000000 Transactions")+": Change Security Code:: ^FF0000Remove Security^000000: Information: Nevermind!:"+(getgroupid()>=.gmacess ? "? ^FF0000[ADM]^000000 Recover Password":""));
+		} else {
+			mes "Security Status: ^FF0000DISABLED^000000";
+			next;
+			set .@menu$,select("Set Security Code::Not Today...::"+(getgroupid()>=.gmacess ? "? ^FF0000[ADM]^000000 Recover Password":""))+2;
+		}
+
+		switch (.@menu$)
+		{
+			next;
+
+			case 1:
+				if(blockcheck()){
+					mes "^FF6600[ Item Security System ]^000000";
+					mes "Enter the password to ^FF0000Allow^000000 transfer of items.";
+					next;
+					input .@senha;
+					if( #BLOCKPASS != .@senha ){ mes "^FF0000 Incorrect password!! ^000000"; close; }
+					mes "^FF6600[ Item Security System ]^000000";
+					mes "Transaction Status: ^2E8B57Unprotected^000000.";
+					message strcharinfo(0), "Item Negotiations: Unprotected.";
+					block 0;
+				} else {
+					mes "^FF6600[ Item Security System ]^000000";
+					mes "Transaction Status: ^FF0000Protected^000000.";
+					message strcharinfo(0), "Item Transactions: Protected.";
+					block 1;
+				}
+				close;
+
+			case 2:
+				mes "^FF6600[ Item Security System ]^000000";
+				mes "Enter your ^2E8B57Current^000000 security code.";
+				mes "Security code is pure numbers ONLY Between ^3333991000 and 9999^000000";
+				next;
+				input .@senha;
+				if( #BLOCKPASS != .@senha ) { mes "Incorrect Security Code!"; close; }
+				next;
+
+			case 3:
+				mes "^FF6600[ Item Security System ]^000000";
+				mes "Enter your ^2E8B57New^000000 security code.";
+				mes "Between ^3333991000 and 99999^000000.";
+				input .@senha;
+				next;
+				if( .@senha < 1000 || .@senha > 99999 ) {
+					mes "Invalid Value! Try again.";
+					close;
+				}
+				mes "Please enter the password again to confirm:";
+				input .@Rsenha;
+				if( .@senha != .@Rsenha ) {
+					mes "Passwords do not match. Try again.";
+					close;
+				}
+				set #BLOCKPASS, .@senha;
+				query_sql "REPLACE INTO `security_db` (`account_id`, `key`, `index`, `value`, `username`) VALUES (" + getcharid(3) + ", '#BLOCKPASS', 0, " + .@senha + ", '" + escape_sql(strcharinfo(0)) + "')";
+				mes "Security Status: ^2E8B57[Enabled]^000000";
+				mes "Transaction Status: ^FF0000[DISABLED]^000000";
+				mes "Use @" + .comando$ + " to manage your Security System.";
+				close;
+
+			case 4:
+				mes "^FF6600[ Item Security System ]^000000";
+				mes "Disable security system?";
+				if(select(" ^2E8B57No^000000: Yes (^FF0000Remove/Disable Protection^000000)")==1) close;
+				mes "Enter your ^2E8B57Current^000000 security code.";
+				input .@senha;
+				if( #BLOCKPASS != .@senha ) { mes "Incorrect password!!"; close; }
+				set #BLOCKPASS, 0;
+				query_sql "DELETE FROM `security_db` WHERE `account_id` = " + getcharid(3) + " AND `key` = '#BLOCKPASS'";
+				block 0;
+				mes "Security system ^2E8B57Disabled^000000 and password removed.";
+				close;
+
+			case 5:
+				mes "^FF6600[ Item Security System ]^000000";
+				mes "This system prevents item drops/sells/trades without your permission.";
+				next;
+				mes "^FF6600[ Item Security System ]^000000";
+				mes "Once enabled, trade is blocked on login and allowed only after password verification.";
+				next;
+				mes "^FF6600[ Item Security System ]^000000";
+				mes "Use @" + .comando$ + " to activate the protection system.";
+				close;
+
+			case 6:
+				mes "^FF6600[ Item Security System ]^000000";
+				mes "Use @" + .comando$ + " to configure the account protection system.";
+				close;
+
+			case 7:
+   if (getgroupid() < .gmacess) {
+       mes "You don't have permission to use this feature.";
+       close;
+   }
+	mes "^FF6600.:: Account Protection Admin ::.^000000";
+	mes "Enter the account ID to recover the password for:";
+	input .@acc;
+	next;
+	.@username$ = "";
+	.@ResultPass = callfunc("getpass", "SelectPass", .@acc, .@username$);
+	if (!.@ResultPass) {
+		mes "Account not found or protection is disabled.";
+	} else {
+		mes "Account Username: " + .@username$;
+		mes "Security Code: " + .@ResultPass;
+	}
+	close;
+		}
+	}
+
+
+-	script	TableCreator	-1,{
+	OnInit:
+		query_sql("CREATE TABLE IF NOT EXISTS `security_db` (`account_id` INT(11) UNSIGNED NOT NULL DEFAULT '0', `key` VARCHAR(32) NOT NULL DEFAULT '', `index` INT(11) UNSIGNED NOT NULL DEFAULT '0', `value` BIGINT(20) NOT NULL DEFAULT '0', `username` VARCHAR(30) DEFAULT NULL, PRIMARY KEY (`account_id`, `key`, `index`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+		end;
+}
+
+function	script	getpass	{
+	// getpass(type$, acc_id, &username$)
+	.@type$ = getarg(0);
+	.@acc   = getarg(1);
+	if (.@type$ == "SelectPass") {
+		query_sql("SELECT `value`, `username` FROM `security_db` WHERE `key`='#BLOCKPASS' AND `account_id`=" + .@acc, .@value, getarg(2));
+		return .@value;
+	}
+	return 0;
+}
