@@ -1,0 +1,23 @@
+// File: npc/custom/vipstatus.txt
+
+-	script	@vipstatus	-1,{
+	OnInit:
+		bindatcmd "vipstatus", strnpcinfo(3)+"::OnCommand";
+		end;
+
+	OnCommand:
+		.@vip = vip_status(VIP_STATUS_ACTIVE);
+		.@remain = vip_status(VIP_STATUS_REMAINING);
+
+		if (!.@vip) {
+			dispbottom "You are not a VIP.";
+			end;
+		}
+
+		.@days = .@remain / 86400;
+		.@hours = (.@remain % 86400) / 3600;
+		.@mins = (.@remain % 3600) / 60;
+
+		dispbottom " VIP Active - Time Remaining: " + .@days + " day(s), " + .@hours + " hour(s), " + .@mins + " minute(s).";
+		end;
+}

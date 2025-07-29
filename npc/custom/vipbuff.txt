@@ -1,0 +1,76 @@
+-	script	@vipbuff	-1,{
+	OnInit:
+	bindatcmd "vipbuff", strnpcinfo(3)+"::OnCommand";
+	end;
+
+OnCommand:
+	if (!vip_status(1)) {
+		dispbottom "This feature is available for VIP players only.";
+		end;
+	}
+
+	mes "[ VIP Buffs - Settings ]";
+	mes "Select which buffs you want to enable or disable:";
+	next;
+
+	// Initialize variables if not set
+if ((#buff_bless != 1) && (#buff_bless != 0)) #buff_bless = 0;
+if ((#buff_agi != 1) && (#buff_agi != 0)) #buff_agi = 0;
+if ((#buff_food != 1) && (#buff_food != 0)) #buff_food = 0;
+if ((#buff_slink != 1) && (#buff_slink != 0)) #buff_slink = 0;
+	do {
+.@i = select(
+	((#buff_bless) ? "^00FF00[ON]^000000 " : "^FF0000[OFF]^000000 ") + "Blessing",
+	((#buff_agi) ? "^00FF00[ON]^000000 " : "^FF0000[OFF]^000000 ") + "Increase Agility",
+	((#buff_food) ? "^00FF00[ON]^000000 " : "^FF0000[OFF]^000000 ") + "Food Buffs",
+	((#buff_slink) ? "^00FF00[ON]^000000 " : "^FF0000[OFF]^000000 ") + "Soul Link",
+	"Done"
+);
+
+		switch (.@i) {
+			case 1: #buff_bless = !#buff_bless; break;
+			case 2: #buff_agi = !#buff_agi; break;
+			case 3:
+				callsub FoodBuffMenu;
+				break;
+			case 4: #buff_slink = !#buff_slink; break;
+			case 5:
+				mes "Your VIP buff preferences have been saved.";
+				close;
+		}
+	} while (1);
+
+FoodBuffMenu:
+	// Initialize food stat variables if not already set
+if ((#food_str != 1) && (#food_str != 0)) #food_str = 0;
+if ((#food_agi != 1) && (#food_agi != 0)) #food_agi = 0;
+if ((#food_vit != 1) && (#food_vit != 0)) #food_vit = 0;
+if ((#food_int != 1) && (#food_int != 0)) #food_int = 0;
+if ((#food_dex != 1) && (#food_dex != 0)) #food_dex = 0;
+if ((#food_luk != 1) && (#food_luk != 0)) #food_luk = 0;
+	do {
+		mes "[ Food Buff Selection ]";
+		mes "Toggle which food buffs you want to enable:";
+		next;
+
+.@choice = select(
+	((#food_str) ? "^00FF00[ON]^000000 " : "^FF0000[OFF]^000000 ") + "STR",
+	((#food_agi) ? "^00FF00[ON]^000000 " : "^FF0000[OFF]^000000 ") + "AGI",
+	((#food_vit) ? "^00FF00[ON]^000000 " : "^FF0000[OFF]^000000 ") + "VIT",
+	((#food_int) ? "^00FF00[ON]^000000 " : "^FF0000[OFF]^000000 ") + "INT",
+	((#food_dex) ? "^00FF00[ON]^000000 " : "^FF0000[OFF]^000000 ") + "DEX",
+	((#food_luk) ? "^00FF00[ON]^000000 " : "^FF0000[OFF]^000000 ") + "LUK",
+	"Back"
+);
+
+		switch (.@choice) {
+			case 1: #food_str = !#food_str; break;
+			case 2: #food_agi = !#food_agi; break;
+			case 3: #food_vit = !#food_vit; break;
+			case 4: #food_int = !#food_int; break;
+			case 5: #food_dex = !#food_dex; break;
+			case 6: #food_luk = !#food_luk; break;
+			case 7: return;
+		}
+	} while (1);
+}
