@@ -8867,23 +8867,23 @@ ACMD_FUNC(rates)
 	clif_displaymessage(sd->fd, buf);
 
 	// -- Normal Drop Rates --
-	int common = battle_config.item_rate_common + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_common) / 100 : 0);
-	int heal   = battle_config.item_rate_heal   + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_heal) / 100 : 0);
-	int usable = battle_config.item_rate_use    + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_use) / 100 : 0);
+	int common = (battle_config.item_rate_common * (100 + (isvip ? battle_config.vip_drop_increase : 0))) / 100;
+	int heal   = (battle_config.item_rate_heal   * (100 + (isvip ? battle_config.vip_drop_increase : 0))) / 100;
+	int usable = (battle_config.item_rate_use    * (100 + (isvip ? battle_config.vip_drop_increase : 0))) / 100;
 
 	snprintf(buf, sizeof(buf), "Common | Healing | Usable: %dx", common); // optional: include heal/usable
 	clif_displaymessage(sd->fd, buf);
 
 	// -- Equipment --
-	int equip = battle_config.item_rate_equip + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_equip) / 100 : 0);
-	int equip_mvp = battle_config.item_rate_equip_mvp + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_equip_mvp) / 100 : 0);
-	snprintf(buf, sizeof(buf), "Normal Equipment: %dx | MVP Equipment: %dx%s (Modified)", equip, equip_mvp, (equip_mvp != 100) ? " (Modified)" : "");
+	int equip = (battle_config.item_rate_equip * (100 + (isvip ? battle_config.vip_drop_increase : 0))) / 100;
+	int equip_mvp = battle_config.item_rate_equip_mvp;
+	snprintf(buf, sizeof(buf), "Normal Equipment: %dx | MVP Equipment: %dx%s (Modified)", equip, equip_mvp, (equip_mvp != 100) ? " " : "");
 	clif_displaymessage(sd->fd, buf);
 
 	// -- Card Rates --
-	float card = (battle_config.item_rate_card + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_card) / 10000 : 0)) / 10000.0;
-	float card_mvp = (battle_config.item_rate_card_mvp + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_card_mvp) / 10000 : 0)) / 10000.0;
-	float card_boss = (battle_config.item_rate_card_boss + (isvip ? (battle_config.vip_drop_increase * battle_config.item_rate_card_boss) / 10000 : 0)) / 10000.0;
+	float card = (battle_config.item_rate_card * (100 + (isvip ? battle_config.vip_drop_increase : 0))) / 1000000.0;
+	float card_mvp = battle_config.item_rate_card_mvp / 10000.0;
+	float card_boss = battle_config.item_rate_card_boss / 10000.0;
 
 	snprintf(buf, sizeof(buf), "Normal Card: %.2f%% | MVP Card: %.2f%% | Rare Card: %.2f%% | Other Bonus: 1000x", card, card_boss, card_mvp);
 	clif_displaymessage(sd->fd, buf);

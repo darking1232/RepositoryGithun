@@ -2856,8 +2856,13 @@ int32 mob_getdroprate(struct block_list *src, std::shared_ptr<s_mob_db> mob, int
 			int32 cap;
 
 			if (pc_isvip(sd)) { // Increase item drop rate for VIP.
-				// Unsure how the VIP and other bonuses should stack, this is additive.
-				drop_rate_bonus += battle_config.vip_drop_increase;
+	// Prevent VIP drop bonus on MVPs and Mini Bosses
+	e_mob_bosstype boss_type = mob->get_bosstype();
+	bool is_boss = boss_type == BOSSTYPE_MINIBOSS || boss_type == BOSSTYPE_MVP;
+
+	if (!is_boss) {
+		drop_rate_bonus += battle_config.vip_drop_increase;
+	}
 				cap = battle_config.drop_rate_cap_vip;
 			} else
 				cap = battle_config.drop_rate_cap;
