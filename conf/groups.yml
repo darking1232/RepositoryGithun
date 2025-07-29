@@ -94,6 +94,7 @@ Body:
       langtype: true
       me: true
       remove: true
+      changeleader: true
     Permissions:
       attendance: false
   - Id: 2
@@ -243,6 +244,7 @@ Body:
       bypass_max_stat: true
       macro_register: true
       trade_unconditional: true
+      attendance: true
       #all_permission: true
 
 Footer:
