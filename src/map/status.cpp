@@ -10849,11 +10849,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 					int32 i;
 					for( i = 0; i < MAX_DEVOTION; i++ ) {
 						if( sd->devotion[i] && (tsd = map_id2sd(sd->devotion[i])) )
-							status_change_start(src,tsd, type, 10000, val1, val2, val3, val4, tick, SCSTART_NOAVOID|SCSTART_NOICON);
+							status_change_start(src,tsd, type, 10000, val1, val2, val3, val4, tick, battle_config.devotion_icon_effectskill ? 1 :  SCSTART_NOAVOID|SCSTART_NOICON);
 					}
 				}
 				else if( bl->type == BL_MER && ((TBL_MER*)bl)->devotion_flag && (tsd = ((TBL_MER*)bl)->master) )
-					status_change_start(src,tsd, type, 10000, val1, val2, val3, val4, tick, SCSTART_NOAVOID|SCSTART_NOICON);
+					status_change_start(src,tsd, type, 10000, val1, val2, val3, val4, tick, battle_config.devotion_icon_effectskill ? 1 : SCSTART_NOAVOID|SCSTART_NOICON);
 			}
 			if( val4 )
 				tick = INFINITE_TICK;
@@ -10948,11 +10948,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 					int32 i;
 					for( i = 0; i < MAX_DEVOTION; i++ ) {
 						if( sd->devotion[i] && (tsd = map_id2sd(sd->devotion[i])) )
-							status_change_start(src,tsd, type, 10000, val1, val2, 0, 1, tick, SCSTART_NOAVOID|SCSTART_NOICON);
+							status_change_start(src,tsd, type, 10000, val1, val2, 0, 1, tick, battle_config.devotion_icon_effectskill ? 1 : SCSTART_NOAVOID|SCSTART_NOICON);
 					}
 				}
 				else if( bl->type == BL_MER && ((TBL_MER*)bl)->devotion_flag && (tsd = ((TBL_MER*)bl)->master) )
-					status_change_start(src,tsd, type, 10000, val1, val2, 0, 1, tick, SCSTART_NOAVOID|SCSTART_NOICON);
+					status_change_start(src,tsd, type, 10000, val1, val2, 0, 1, tick, battle_config.devotion_icon_effectskill ? 1 : SCSTART_NOAVOID|SCSTART_NOICON);
 			}
 			break;
 		case SC_STRIPWEAPON:
@@ -11293,11 +11293,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 					if( sd ) {
 						for( i = 0; i < MAX_DEVOTION; i++ ) {
 							if( sd->devotion[i] && (tsd = map_id2sd(sd->devotion[i])) )
-								status_change_start(src,tsd, type, 10000, val1, val2, 0, 0, tick, SCSTART_NOAVOID|SCSTART_NOICON);
+								status_change_start(src,tsd, type, 10000, val1, val2, 0, 0, tick, battle_config.devotion_icon_effectskill ? 1 : SCSTART_NOAVOID|SCSTART_NOICON);
 						}
 					}
 					else if( bl->type == BL_MER && ((TBL_MER*)bl)->devotion_flag && (tsd = ((TBL_MER*)bl)->master) )
-						status_change_start(src,tsd, type, 10000, val1, val2, 0, 0, tick, SCSTART_NOAVOID|SCSTART_NOICON);
+						status_change_start(src,tsd, type, 10000, val1, val2, 0, 0, tick, battle_config.devotion_icon_effectskill ? 1 : SCSTART_NOAVOID|SCSTART_NOICON);
 				}
 			}
 			break;
@@ -11463,7 +11463,7 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				while( i >= 0 ) {
 					enum sc_type type2 = types[i];
 					if( d_sc->getSCE(type2) )
-						status_change_start(d_bl, bl, type2, 10000, d_sc->getSCE(type2)->val1, 0, 0, (type2 == SC_REFLECTSHIELD ? 1 : 0), skill_get_time(status_db.getSkill(type2),d_sc->getSCE(type2)->val1), (type2 == SC_DEFENDER) ? SCSTART_NOAVOID : SCSTART_NOAVOID|SCSTART_NOICON);
+						status_change_start(d_bl, bl, type2, 10000, d_sc->getSCE(type2)->val1, 0, 0, (type2 == SC_REFLECTSHIELD ? 1 : 0), skill_get_time(status_db.getSkill(type2), d_sc->getSCE(type2)->val1), battle_config.devotion_icon_effectskill ? SCSTART_NOAVOID : ((type2 == SC_DEFENDER) ? SCSTART_NOAVOID : SCSTART_NOAVOID));
 					i--;
 				}
 			}

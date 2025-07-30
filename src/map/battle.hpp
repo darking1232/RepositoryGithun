@@ -636,6 +636,7 @@ struct Battle_Config
 	int32 mob_chase_refresh; //How often a monster should refresh its chase [Playtester]
 	int32 mob_icewall_walk_block; //How a normal monster should be trapped in icewall [Playtester]
 	int32 boss_icewall_walk_block; //How a boss monster should be trapped in icewall [Playtester]
+	int devotion_icon_effectskill;	// Addon Devotion Icon Effect skill [Napster]
 	int32 snap_dodge; // Enable or disable dodging damage snapping away [csnv]
 	int32 stormgust_knockback;
 	int32 default_fixed_castrate;

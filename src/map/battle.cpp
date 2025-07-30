@@ -12094,6 +12094,8 @@ static const struct _battle_data {
 	{ "max_extended_aspd",                  &battle_config.max_extended_aspd,               193,    100,    199,            },
 	{ "monster_chase_refresh",              &battle_config.mob_chase_refresh,               32,     0,      MAX_WALKPATH,   },
 	{ "mob_icewall_walk_block",             &battle_config.mob_icewall_walk_block,          75,     0,      255,            },
+	// Addon Devotion Icon Effect skill [Napster]
+	{ "devotion_icon_effectskill",                  &battle_config.devotion_icon_effectskill,                1,     0,      1,              },
 	{ "boss_icewall_walk_block",            &battle_config.boss_icewall_walk_block,         0,      0,      255,            },
 	{ "snap_dodge",                         &battle_config.snap_dodge,                      0,      0,      1,              },
 	{ "stormgust_knockback",                &battle_config.stormgust_knockback,             1,      0,      1,              },

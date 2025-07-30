@@ -1,0 +1,135 @@
+prontera,164,167,3	script	Skill Plagiarism	911,{
+	getmapxy(.@map$, .@x, .@y, BL_NPC);
+	getmapxy(.@map2$, .@x2, .@y2, BL_PC);
+	if (.@map$ != .@map2$ || distance(.@x, .@y, .@x2, .@y2) > 9) {
+		dispbottom "[ Skill Plagiarism ] You must be within 9 tiles of me.";
+		end;
+	}
+
+	if (Class != Job_Rogue && Class != Job_Stalker) {
+		mes "[ Skill Plagiarism ]";
+		mes "Sorry, I only work with Rogues or Stalkers.";
+		close;
+	}
+
+	.@plvl = getskilllv(225); // Plagiarism
+	if (.@plvl < 1) {
+		mes "[ Skill Plagiarism ]";
+		mes "You must have at least Level 1 of Plagiarism.";
+		close;
+	}
+
+	mes "[ Skill Plagiarism ]";
+	mes "Welcome, rogue adventurer!";
+	mes "Choose a skill family you wish to copy from.";
+	next;
+
+	switch(select(
+		"Swordsman",
+		"Mage",
+		"Archer",
+		"Merchant",
+		"Thief",
+		"Acolyte",
+		"Extended",
+		"Cancel")) {
+
+	case 1: // Swordsman
+		setarray .@ids[0], 5, 7, 62, 253, 251, 250;
+		setarray .@names$, "Bash", "Magnum Break", "Bowling Bash", "Holy Cross", "Shield Boomerang", "Shield Charge";
+		setarray .@max[0], 10, 10, 10, 10, 5, 5;
+		break;
+
+	case 2: // Mage
+		setarray .@ids[0], 14, 17, 19, 21, 15, 20, 11, 13, 90, 80, 88, 91, 84, 85, 83, 1006, 89;
+		setarray .@names$, "Cold Bolt", "Fire Ball", "Fire Bolt", "Thunder Storm", "Frost Diver", "Lightning Bolt", "Napalm Beat", "Soul Strike", "Earth Spike", "Fire Pillar", "Frost Nova", "Heaven's Drive", "Jupitel Thunder", "Lord of Vermilion", "Meteor Storm", "Sight Blaster", "Storm Gust";
+		setarray .@max[0], 10, 10, 10, 10, 10, 10, 10, 10, 5, 10, 10, 5, 10, 10, 10, 1, 10;
+		break;
+
+	case 3: // Archer
+		setarray .@ids[0], 46, 148, 47, 116, 122, 123;
+		setarray .@names$, "Double Strafe", "Charge Arrow", "Arrow Shower", "Land Mine", "Blast Mine", "Claymore Trap";
+		setarray .@max[0], 10, 1, 10, 5, 5, 5;
+		break;
+
+	case 4: // Merchant
+		setarray .@ids[0], 42, 230, 490;
+		setarray .@names$, "Mammonite", "Acid Terror", "Demonstration";
+		setarray .@max[0], 10, 5, 10;
+		break;
+
+	case 5: // Thief
+		setarray .@ids[0], 52, 149, 152, 1004, 141;
+		setarray .@names$, "Envenom", "Sprinkle Sand", "Throw Stone", "Throw Venom Knife", "Venom Splasher";
+		setarray .@max[0], 10, 1, 1, 1, 10;
+		break;
+
+	case 6: // Acolyte
+		setarray .@ids[0], 156, 70, 79, 263, 266, 271;
+		setarray .@names$, "Holy Light", "Sanctuary", "Magnus Exorcismus", "Triple Attack", "Investigate", "Asura Strike";
+		setarray .@max[0], 1, 10, 10, 10, 5, 5;
+		break;
+
+	case 7: // Extended
+		setarray .@ids[0], 527, 528, 537, 540, 536, 534;
+		setarray .@names$, "Improvised Defense", "Vanishing Slash", "Spear of Ice", "Wind Blade", "Raging Fire Dragon", "Crimson Fire Petal";
+		setarray .@max[0], 5, 10, 10, 10, 5, 10;
+		break;
+
+	default:
+		end;
+	}
+
+	.@count = getarraysize(.@ids);
+	.@menu$ = "";
+	deletearray .@valid_id;
+	deletearray .@valid_lv;
+	deletearray .@valid_name$;
+
+	for (.@i = 0; .@i < .@count; .@i++) {
+		.@level = min(.@plvl, .@max[.@i]);
+		.@menu$ += .@names$[.@i] + " (Lv. " + .@level + "):";
+		.@valid_id[getarraysize(.@valid_id)] = .@ids[.@i];
+		.@valid_lv[getarraysize(.@valid_lv)] = .@level;
+		.@valid_name$[getarraysize(.@valid_name$)] = .@names$[.@i];
+	}
+
+	.@s = select(.@menu$) - 1;
+
+	if (.@s >= getarraysize(.@valid_id)) {
+		mes "[ Skill Plagiarism ]";
+		mes "That skill cannot be copied.";
+		close;
+	}
+
+	.@sk_id = .@valid_id[.@s];
+	.@sk_lv = .@valid_lv[.@s];
+	.@sk_name$ = .@valid_name$[.@s];
+
+	if (getskilllv(.@sk_id)) {
+		mes "[ Skill Plagiarism ]";
+		mes "You already know the skill: ^FF0000" + .@sk_name$ + "^000000.";
+		close;
+	}
+
+	mes "[ Skill Plagiarism ]";
+	mes "You chose ^00FF00" + .@sk_name$ + "^000000 (Lv. " + .@sk_lv + ")";
+	mes "It will cost you ^FFAA00300,000 Zeny^000000.";
+	next;
+
+	if (select("Proceed:Cancel") == 1) {
+		if (Zeny < 300000) {
+			mes "[ Skill Plagiarism ]";
+			mes "Insufficient Zeny.";
+			close;
+		}
+		Zeny -= 300000;
+
+		unitskilluseid getnpcid(0), .@sk_id, .@sk_lv, getcharid(3);
+
+		mes "[ Skill Plagiarism ]";
+		mes "You have successfully copied ^00FF00" + .@sk_name$ + "^000000!";
+		close;
+	}
+	close;
+}
