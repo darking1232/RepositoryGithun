@@ -35,7 +35,7 @@ aldeba_in,96,181,4	script	Kafra Service	113,{
 	mes "Headquarters. Did you";
 	mes "need something?";
 	next;
-	switch(select("Save:Use Storage:Rent a Pushcart:Cancel")) {
+	switch(select("Save:Use Storage:Cancel")) {
 	case 1:
 		mes "[Kafra Leilah]";
 		mes "Your Respawn Point has";
@@ -53,11 +53,11 @@ aldeba_in,96,181,4	script	Kafra Service	113,{
 		close2;
 		break;
 	case 2:
-		if (Zeny < 20) {
+		if (Zeny < 1000) {
 			mes "[Kafra Leilah]";
 			mes "Excuse me, but it";
 			mes "seems that you don't";
-			mes "have the 20 zeny to pay";
+			mes "have the 1,000 zeny to pay";
 			mes "the Storage access fee...";
 			close3;
 		}
@@ -68,7 +68,7 @@ aldeba_in,96,181,4	script	Kafra Service	113,{
 		mes "and administrative functions,";
 		mes "I'll access your Storage for you.";
 		next;
-		set Zeny, Zeny-20;
+		set Zeny, Zeny-1000;
 		set RESRVPTS, RESRVPTS + (20/5);
 		mes "[Kafra Leilah]";
 		mes "In the future, please";
@@ -81,23 +81,6 @@ aldeba_in,96,181,4	script	Kafra Service	113,{
 		openstorage;
 		break;
 	case 3:
-		mes "[Kafra Leilah]";
-		mes "My apologies, but I'm";
-		mes "not on duty. I'd assist you";
-		mes "if I could, but actually don't";
-		mes "have any available Pushcarts.";
-		mes "Why don't you ask another Kafra";
-		mes "Employee for assistance?";
-		next;
-		mes "[Kafra Leilah]";
-		mes "Kafra Employees are";
-		mes "stationed all over the";
-		mes "Midgard continent,";
-		mes "and you should be able to find";
-		mes "plenty outside in Al De Baran.";
-		close2;
-		break;
-	case 4:
 		mes "[Kafra Leilah]";
 		mes "^666666*Whew...*^000000";
 		mes "Great, because I'm";
@@ -299,6 +282,21 @@ prontera,146,89,6	script	Kafra Employee::kaf_prontera5	117,{
 	savepoint "prontera",116,73,1,1;
 	callfunc "F_KafEnd",0,1,"in the city of Prontera";
 }
+
+prontera,159,189,4	script	Kafra Employee::kaf_prontera6	117,{
+	cutin "kafra_01",2;
+	callfunc "F_KafSet";
+	mes "[Kafra Employee]";
+	mes "Welcome to the";
+	mes "Kafra Corporation.";
+	mes "The Kafra services";
+	mes "are always on your side.";
+	mes "How may I assist you?";
+	callfunc "F_Kafra",5,0,0,40,800;
+	savepoint "prontera",155,184,1,1;
+	callfunc "F_KafEnd",0,1,"in the city of Prontera";
+}
+
 
 // Juno
 //============================================================

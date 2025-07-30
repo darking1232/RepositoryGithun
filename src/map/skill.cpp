@@ -2379,7 +2379,7 @@ int32 skill_additional_effect( struct block_list* src, struct block_list *bl, ui
 #ifndef RENEWAL
 			else if( skill == AS_SONICBLOW ){
 				// Special case, Sonic Blow autospell should stop the player attacking.
-				unit_stop_attack( sd );
+				//unit_stop_attack( sd );
 			}
 #endif
 
