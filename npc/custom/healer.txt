@@ -6,11 +6,18 @@
 		end;
 
 	specialeffect2 EF_HEAL2;
-	specialeffect2 EF_INCAGILITY;
-	specialeffect2 EF_BLESSING;
 	percentheal 100,100;
+	// Repair broken items (VIP)
+	if (getbrokenid(1)) repairall;
 
 	if (vip_status(1)) {
+
+		if (Zeny >= 10000) {
+			Zeny -= 10000;
+			dispbottom "Thank you for donating 10,000. This will help the server economy.";
+		}
+		specialeffect2 EF_INCAGILITY;
+		specialeffect2 EF_BLESSING;
 		if (#buff_agi) sc_start SC_INCREASEAGI,600000,10;
 		if (#buff_bless) sc_start SC_BLESSING,600000,10;
 		if (#buff_food) {
@@ -27,36 +34,37 @@
 			end;
 		}
 		if (#buff_slink) {
-			switch (BaseJob) {
-				case Job_Knight:        sc_start SC_SL_KNIGHT,600000,0; break;
-				case Job_Assassin:      sc_start SC_SL_ASSASIN,600000,0; break;
-				case Job_Priest:        sc_start SC_SL_PRIEST,600000,0; break;
-				case Job_Wizard:        sc_start SC_SL_WIZARD,600000,0; break;
-				case Job_Blacksmith:    sc_start SC_SL_BLACKSMITH,600000,0; break;
-				case Job_Crusader:      sc_start SC_SL_CRUSADER,600000,0; break;
-				case Job_Rogue:         sc_start SC_SL_ROGUE,600000,0; break;
-				case Job_Monk:          sc_start SC_SL_MONK,600000,0; break;
-				case Job_Sage:          sc_start SC_SL_SAGE,600000,0; break;
-				case Job_Bard:
-				case Job_Dancer:        sc_start SC_SL_BARDDANCER,600000,0; break;
-				case Job_Alchemist:     sc_start SC_SL_ALCHEMIST,600000,0; break;
-				case Job_SuperNovice:   sc_start SC_SL_SUPERNOVICE,600000,0; break;
-				case Job_Star_Gladiator: sc_start SC_SL_STAR,600000,0; break;
-				case Job_Soul_Linker:    sc_start SC_SL_SOUL_LINKER,600000,0; break;
-				case Job_Gunslinger:    sc_start SC_SL_GUNSLINGER,600000,0; break;
-				case Job_Ninja:         sc_start SC_SL_NINJA,600000,0; break;
-				case Job_Taekwon:       sc_start SC_SL_TAEKWON,600000,0; break;
-				default:
-					dispbottom "Your class does not have a Soul Link.";
-					break;
+			switch ( basejob ) {
+				case Job_Alchemist: set .@spirit, 445; break;
+				case Job_Monk: set .@spirit, 447; break;
+				case Job_Star_Gladiator: set .@spirit, 448; break;
+				case Job_Sage: set .@spirit, 449; break;
+				case Job_Crusader: set .@spirit, 450; break;
+				case Job_SuperNovice: set .@spirit, 451; break;
+				case Job_Knight: set .@spirit, 452; break;
+				case Job_Wizard: set .@spirit, 453; break;
+				case Job_Priest: set .@spirit, 454; break;
+				case Job_Bard: case Job_Dancer: set .@spirit, 455; break;
+				case Job_Rogue: set .@spirit, 456; break;
+				case Job_Assassin: set .@spirit, 457; break;
+				case Job_Blacksmith: set .@spirit, 458; break;
+				case Job_Hunter: set .@spirit, 460; break;
+				case Job_Soul_Linker: set .@spirit, 461; break;
+		default:
+				if ( upper == 1 && baselevel < 70 ) set .@spirit, 494;
+			}
+			if ( .@spirit ) {
+				sc_start4 sc_spirit, .@time, 5, .@spirit,0,0;
+				skilleffect .@spirit, 5;
 			}
 		}
 		
 	dispbottom "VIP Buffs have been applied.";
-	// Repair broken items (VIP)
-	if (getbrokenid(1)) repairall;
+
 
 	} else {
+		specialeffect2 EF_INCAGILITY;
+		specialeffect2 EF_BLESSING;
 		sc_start SC_INCREASEAGI,300000,10;
 		sc_start SC_BLESSING,300000,10;
 	}
