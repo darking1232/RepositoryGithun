@@ -9859,6 +9859,10 @@ Body:
     Hit: Single
     HitCount: 1
     AfterCastActDelay: 2000
+    CopyFlags:
+      Skill:
+        Plagiarism: true
+        Reproduce: true
     Requires:
       SpCost: 100
     Status: Sacrifice

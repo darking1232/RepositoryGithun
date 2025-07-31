@@ -1,17 +1,32 @@
 prontera,164,167,3	script	Skill Plagiarism	911,{
+
 	getmapxy(.@map$, .@x, .@y, BL_NPC);
 	getmapxy(.@map2$, .@x2, .@y2, BL_PC);
-	if (.@map$ != .@map2$ || distance(.@x, .@y, .@x2, .@y2) > 9) {
-		dispbottom "[ Skill Plagiarism ] You must be within 9 tiles of me.";
-		end;
+	if (.@map$ != .@map2$ || distance(.@x, .@y, .@x2, .@y2) > 3) {
+		mes "[ Skill Plagiarism ]";
+		mes "You must be beside me.";
+		close;
 	}
+	mes "[ Skill Plagiarism ]";
+	mes "Preparing skills... please wait for 5 Seconds before the Button Appear.";
+	sleep2 5000; // 5 seconds
+	next;
+	// Boost HIT of NPC to prevent skill misses (for debugging)
+	setunitdata(getnpcid(0), UNPC_DEX, 300);
+	setunitdata(getnpcid(0), UNPC_ATKMIN, 100);
+	setunitdata(getnpcid(0), UNPC_ATKMAX, 200);
 
 	if (Class != Job_Rogue && Class != Job_Stalker) {
 		mes "[ Skill Plagiarism ]";
 		mes "Sorry, I only work with Rogues or Stalkers.";
 		close;
 	}
-
+	if (HP < 1500) {
+		mes "[ Skill Plagiarism ]";
+		mes "You must have more than 1500 HP to proceed,";
+		mes "Heal UP or increase add VIT Stats.";
+		close;
+	}
 	.@plvl = getskilllv(225); // Plagiarism
 	if (.@plvl < 1) {
 		mes "[ Skill Plagiarism ]";
@@ -19,37 +34,53 @@ prontera,164,167,3	script	Skill Plagiarism	911,{
 		close;
 	}
 
+	if (checkoption(OPTION_HIDE)) {
+		dispbottom "[ Skill Plagiarism ] You cannot use this while hiding, cloaked, or chase walking.";
+		end;
+	}
 	mes "[ Skill Plagiarism ]";
-	mes "Welcome, rogue adventurer!";
+	mes "Any Existing Status Effect appled might be removed once you have been provided with the skill you wish.";
+	next;
+	mes "[ Skill Plagiarism ]";
+	mes "You currently have Plagiarism Level " + .@plvl + ".";
+	mes "The Skill level that will be applied to you will be based on your Plagiarism skill Level.";
+	mes "See Ratemyserver.net for Maximum Allowed skill level.";
+	next;
+	mes "[ Skill Plagiarism ]";
 	mes "Choose a skill family you wish to copy from.";
 	next;
+	// Clear base arrays
+	deletearray .@ids;
+	deletearray .@names$;
 
 	switch(select(
-		"Swordsman",
-		"Mage",
-		"Archer",
-		"Merchant",
-		"Thief",
-		"Acolyte",
-		"Extended",
-		"Cancel")) {
+		"Swordsman", "Mage", "Archer", "Merchant", "Thief", "Acolyte", "Extended", "Cancel")) {
 
 	case 1: // Swordsman
-		setarray .@ids[0], 5, 7, 62, 253, 251, 250;
-		setarray .@names$, "Bash", "Magnum Break", "Bowling Bash", "Holy Cross", "Shield Boomerang", "Shield Charge";
-		setarray .@max[0], 10, 10, 10, 10, 5, 5;
+		setarray .@ids[0], 5, 7, 62, 253, 251, 250 ,368;
+		setarray .@names$, "Bash", "Magnum Break", "Bowling Bash", "Holy Cross", "Shield Boomerang", "Shield Charge", "Martyr's Reckoning";
+		setarray .@max[0], 10, 10, 10, 10, 5, 5, 5;
 		break;
 
 	case 2: // Mage
-		setarray .@ids[0], 14, 17, 19, 21, 15, 20, 11, 13, 90, 80, 88, 91, 84, 85, 83, 1006, 89;
-		setarray .@names$, "Cold Bolt", "Fire Ball", "Fire Bolt", "Thunder Storm", "Frost Diver", "Lightning Bolt", "Napalm Beat", "Soul Strike", "Earth Spike", "Fire Pillar", "Frost Nova", "Heaven's Drive", "Jupitel Thunder", "Lord of Vermilion", "Meteor Storm", "Sight Blaster", "Storm Gust";
-		setarray .@max[0], 10, 10, 10, 10, 10, 10, 10, 10, 5, 10, 10, 5, 10, 10, 10, 1, 10;
+		deletearray .@ids;
+		deletearray .@names$;
+		deletearray .@max_lv;
+
+		setarray .@ids[0],
+			14, 17, 19, 21, 15, 20, 11, 13, 90, 80, 88, 91, 84, 85, 83, 1006, 89;
+		setarray .@names$,
+			"Cold Bolt", "Fire Ball", "Fire Bolt", "Thunder Storm", "Frost Diver", "Lightning Bolt",
+			"Napalm Beat", "Soul Strike", "Earth Spike", "Fire Pillar", "Frost Nova", "Heaven's Drive",
+			"Jupitel Thunder", "Lord of Vermilion", "Meteor Storm", "Sight Blaster", "Storm Gust";
+		setarray .@max_lv[0],
+			10, 10, 10, 10, 10, 10, 10, 10, 5, 10, 10, 5, 10, 10, 10, 1, 10;
 		break;
 
 	case 3: // Archer
-		setarray .@ids[0], 46, 148, 47, 116, 122, 123;
-		setarray .@names$, "Double Strafe", "Charge Arrow", "Arrow Shower", "Land Mine", "Blast Mine", "Claymore Trap";
-		setarray .@max[0], 10, 1, 10, 5, 5, 5;
+		setarray .@ids[0], 148, 47, 116, 122, 123;
+		setarray .@names$, "Charge Arrow", "Arrow Shower", "Land Mine", "Blast Mine", "Claymore Trap";
+		setarray .@max[0], 1, 10, 5, 5, 5;
 		break;
 
 	case 4: // Merchant
@@ -59,21 +90,21 @@ prontera,164,167,3	script	Skill Plagiarism	911,{
 		break;
 
 	case 5: // Thief
-		setarray .@ids[0], 52, 149, 152, 1004, 141;
-		setarray .@names$, "Envenom", "Sprinkle Sand", "Throw Stone", "Throw Venom Knife", "Venom Splasher";
-		setarray .@max[0], 10, 1, 1, 1, 10;
+		setarray .@ids[0], 1004 ;
+		setarray .@names$, "Throw Venom Knife";
+		setarray .@max[0], 1;
 		break;
 
-	case 6: // Acolyte
+	case 6: // Acolyte / Monk / SG
 		setarray .@ids[0], 156, 70, 79, 263, 266, 271;
 		setarray .@names$, "Holy Light", "Sanctuary", "Magnus Exorcismus", "Triple Attack", "Investigate", "Asura Strike";
 		setarray .@max[0], 1, 10, 10, 10, 5, 5;
 		break;
 
 	case 7: // Extended
-		setarray .@ids[0], 527, 528, 537, 540, 536, 534;
-		setarray .@names$, "Improvised Defense", "Vanishing Slash", "Spear of Ice", "Wind Blade", "Raging Fire Dragon", "Crimson Fire Petal";
-		setarray .@max[0], 5, 10, 10, 10, 5, 10;
+		setarray .@ids[0], 527, 528, 537, 540, 536, 534 , 421;
+		setarray .@names$, "Improvised Defense", "Vanishing Slash", "Spear of Ice", "Wind Blade", "Raging Fire Dragon", "Crimson Fire Petal", "Flying Side Kick";
+		setarray .@max[0], 5, 10, 10, 10, 5, 10, 7;
 		break;
 
 	default:
@@ -81,17 +112,22 @@ prontera,164,167,3	script	Skill Plagiarism	911,{
 	}
 
 	.@count = getarraysize(.@ids);
-	.@menu$ = "";
 	deletearray .@valid_id;
 	deletearray .@valid_lv;
 	deletearray .@valid_name$;
+	.@menu$ = "";
 
 	for (.@i = 0; .@i < .@count; .@i++) {
-		.@level = min(.@plvl, .@max[.@i]);
-		.@menu$ += .@names$[.@i] + " (Lv. " + .@level + "):";
-		.@valid_id[getarraysize(.@valid_id)] = .@ids[.@i];
-		.@valid_lv[getarraysize(.@valid_lv)] = .@level;
-		.@valid_name$[getarraysize(.@valid_name$)] = .@names$[.@i];
+		.@max_lv_value = getarraysize(.@max_lv) ? .@max_lv[.@i] : .@max[.@i];
+		.@copy_lv = min(.@plvl, .@max_lv_value);
+
+		//dispbottom "[TRACE] Skill: " + .@names$[.@i] + " | max: " + .@max_lv_value;
+		//dispbottom "[DEBUG] Skill: " + .@names$[.@i] + " | Your Plagiarism Lv: " + .@plvl + " => Copying at Lv. " + .@copy_lv;
+
+		.@menu$ += .@names$[.@i] + " (Lv. " + .@copy_lv + "):";
+		.@valid_id[.@i] = .@ids[.@i];
+		.@valid_lv[.@i] = .@copy_lv;
+		.@valid_name$[.@i] = .@names$[.@i];
 	}
 
 	.@s = select(.@menu$) - 1;
@@ -105,6 +141,8 @@ prontera,164,167,3	script	Skill Plagiarism	911,{
 	.@sk_id = .@valid_id[.@s];
 	.@sk_lv = .@valid_lv[.@s];
 	.@sk_name$ = .@valid_name$[.@s];
+
+	//dispbottom "[DEBUG] Skill Selected: " + .@sk_name$ + " | Level to Cast: " + .@sk_lv;
 
 	if (getskilllv(.@sk_id)) {
 		mes "[ Skill Plagiarism ]";
@@ -124,11 +162,67 @@ prontera,164,167,3	script	Skill Plagiarism	911,{
 			close;
 		}
 		Zeny -= 300000;
+	while (HP * 100 / MaxHP < 95) {
+		percentheal 100, 100;
+		sleep2 300;
+	}
+		// Boost again to ensure NPC cast success
 
-		unitskilluseid getnpcid(0), .@sk_id, .@sk_lv, getcharid(3);
+		setunitdata(getnpcid(0), UNPC_DEX, 500);
+		setunitdata(getnpcid(0), UNPC_ATKMIN, 100);
+		setunitdata(getnpcid(0), UNPC_ATKMAX, 200);
+setunitdata(getnpcid(0), UNPC_INT, 10);       // Magic accuracy & power
+setunitdata(getnpcid(0), UNPC_MATKMIN, 10);   // Magic min attack
+setunitdata(getnpcid(0), UNPC_MATKMAX, 20);   // Magic max attack
+
+if (.@sk_id == 11 || .@sk_id == 13 || .@sk_id == 85) {
+	setunitdata(getnpcid(0), UNPC_INT, 100);
+	setunitdata(getnpcid(0), UNPC_MATKMIN, 100);
+	setunitdata(getnpcid(0), UNPC_MATKMAX, 200);
+}
+if ( .@sk_id == 85 ) { //stronger skill less damage
+	setunitdata(getnpcid(0), UNPC_INT, 30);
+	setunitdata(getnpcid(0), UNPC_MATKMIN, 100);
+	setunitdata(getnpcid(0), UNPC_MATKMAX, 200);
+}
+
+if (.@sk_id == 116 || .@sk_id == 122 || .@sk_id == 123 ) { //archer trap skills
+		setunitdata(getnpcid(0), UNPC_DEX, 50);
+		setunitdata(getnpcid(0), UNPC_ATKMIN, 100);
+		setunitdata(getnpcid(0), UNPC_ATKMAX, 200);
+}
+if (.@sk_id == 70 || .@sk_id == 79 || .@sk_id == 266 || .@sk_id == 271 || .@sk_id == 527 || .@sk_id == 368 || .@sk_id == 7 || .@sk_id == 62 ||.@sk_id == 80 ||.@sk_id == 88 ||.@sk_id == 1006 ||.@sk_id == 528 ||.@sk_id == 421) {
+	// Use your custom plagiarism command for Sanctuary
+	plagiarism(getcharid(3), .@sk_id, .@sk_lv);
+	mes "[ Skill Plagiarism ]";
+	mes "You have copied ^00FF00" + .@sk_name$ + "^000000 (Lv. " + .@sk_lv + ") successfully!";
+	close;
+}
+
+// For AoE skills
+if (.@sk_id == 21 ||.@sk_id == 80 || .@sk_id == 91 || .@sk_id == 88 || .@sk_id == 89 || .@sk_id == 85 || .@sk_id == 83 || .@sk_id == 116 || .@sk_id == 122 || .@sk_id == 123 || .@sk_id == 79) {
+	unitskillusepos getnpcid(0), .@sk_id, .@sk_lv, .@x2, .@y2;
+} else {
+	unitskilluseid getnpcid(0), .@sk_id, .@sk_lv, getcharid(3);
+}
+
+		//unitskilluseid getnpcid(0), .@sk_id, .@sk_lv, getcharid(3);
+	while (HP * 100 / MaxHP < 90) {
+		percentheal 20, 0;
+		sleep2 300;
+	}
 
 		mes "[ Skill Plagiarism ]";
 		mes "You have successfully copied ^00FF00" + .@sk_name$ + "^000000!";
+		mes "Please wait moment....";
+			// Heal player before casting the skill
+		while (HP * 100 / MaxHP < 95) {
+		percentheal 100, 100;
+		sleep2 500;
+		}
+		sleep2 3000;
+		percentheal 100, 100;
+		sc_end SC_ALL;
 		close;
 	}
 	close;
