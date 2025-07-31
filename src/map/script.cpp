@@ -10420,10 +10420,10 @@ BUILDIN_FUNC(plagiarism)
 	if (pc_checkskill(sd,225) < 1)
 		return SCRIPT_CMD_SUCCESS;
 
-	sd->plag_skill = skill_id;
-	sd->plag_lv = skill_lv;
-
-	clif_skillinfoblock(sd); // refresh skill UI (fake, but harmless)
+	// Use the existing plagiarism system to add the skill
+	if (pc_skill_plagiarism(*sd, skill_id, skill_lv)) {
+		clif_skillinfoblock(sd); // refresh skill UI
+	}
 
 	return SCRIPT_CMD_SUCCESS;
 }
