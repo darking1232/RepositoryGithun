@@ -536,6 +536,8 @@ public:
 	std::unordered_map<uint16, int32> scd; // Skill Cooldown
 	uint16 cloneskill_idx, ///Stores index of copied skill by Intimidate/Plagiarism
 		reproduceskill_idx; ///Stores index of copied skill by Reproduce
+	uint16 plag_skill; ///Stores skill ID for custom plagiarism function
+	uint16 plag_lv; ///Stores skill level for custom plagiarism function
 	int32 menuskill_id, menuskill_val, menuskill_val2;
 
 	int32 invincible_timer;

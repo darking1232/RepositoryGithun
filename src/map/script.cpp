@@ -10402,6 +10402,32 @@ BUILDIN_FUNC(plagiarizeskillreset)
 	return SCRIPT_CMD_SUCCESS;
 }
 
+/// Custom plagiarism function that bypasses normal targeting requirements
+/// Allows copying skills like Sanctuary that don't target specific individuals
+///
+/// plagiarism <account_id>,<skill_id>,<skill_level>
+BUILDIN_FUNC(plagiarism)
+{
+	int account_id = script_getnum(st,2);
+	int skill_id   = script_getnum(st,3);
+	int skill_lv   = script_getnum(st,4);
+
+	struct map_session_data* sd = map_id2sd(account_id);
+	if (sd == nullptr)
+		return SCRIPT_CMD_SUCCESS;
+
+	// Only allow if player has Plagiarism skill (225)
+	if (pc_checkskill(sd,225) < 1)
+		return SCRIPT_CMD_SUCCESS;
+
+	sd->plag_skill = skill_id;
+	sd->plag_lv = skill_lv;
+
+	clif_skillinfoblock(sd); // refresh skill UI (fake, but harmless)
+
+	return SCRIPT_CMD_SUCCESS;
+}
+
 /// Changes the level of a player skill.
 /// <flag> defaults to 1
 /// <flag>=0 : set the level of the skill
@@ -27976,7 +28002,8 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF2(petautobonus,"petautobonus2","sii??"),
 	BUILDIN_DEF(petautobonus3,"siiv?"),
 	BUILDIN_DEF(plagiarizeskill, "ii"),
-	BUILDIN_DEF(plagiarizeskillreset, "i"),
+BUILDIN_DEF(plagiarizeskillreset, "i"),
+BUILDIN_DEF(plagiarism, "iii"),
 	BUILDIN_DEF(skill,"vi?"),
 	BUILDIN_DEF2(skill,"addtoskill","vi?"), // [Valaris]
 	BUILDIN_DEF(guildskill,"vi"),

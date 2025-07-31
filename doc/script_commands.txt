@@ -6565,6 +6565,32 @@ Flag constants:
 
 ---------------------------------------
 
+*plagiarism <account_id>,<skill_id>,<skill_level>;
+
+Custom plagiarism function that bypasses normal targeting requirements.
+This function allows copying skills like Sanctuary that don't target specific individuals.
+
+Parameters:
+	account_id - The account ID of the player to receive the skill
+	skill_id - The skill ID to copy (e.g., 70 for PR_SANCTUARY)
+	skill_level - The skill level to copy
+
+Returns:
+	SCRIPT_CMD_SUCCESS - Always returns success (no return value)
+
+Notes:
+	- Only works if the player has Plagiarism skill (ID 225) at level 1 or higher
+	- Bypasses normal Plagiarism targeting requirements
+	- Useful for ground-targeted skills that can't be copied through normal Plagiarism
+	- The copied skill is stored in the player's plag_skill and plag_lv fields
+	- Calls clif_skillinfoblock() to refresh the skill UI
+
+Example:
+	// Copy Sanctuary (ID 70) with level based on player's Plagiarism level
+	plagiarism(getcharid(CHAR_ID_ACCOUNT), 70, getskilllv(225));
+
+---------------------------------------
+
 *skill <skill id>,<level>{,<flag>};
 *skill "<skill name>",<level>{,<flag>};
 *addtoskill <skill id>,<level>{,<flag>};
