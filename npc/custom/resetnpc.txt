@@ -1,49 +1,58 @@
 //===== rAthena Script =======================================
-//= Reset NPC
+//= Reset NPC (Luxury Version)
 //===== Description: =========================================
-//= Resets skills, stats, or both.
-//===== Additional Comments: =================================
-//= 1.0 First Version
-//= 1.1 Optimized for the greater good. [Kisuka]
-//= 1.2 Cleaning [Euphy]
-//= 1.3 All statuses removed upon skill reset. [Euphy]
-//= 1.4 Compressed Script, Added limit use option [Stolao]
-//=	Changed set -> setarray, Improved text with F_InsertPlural
-//= 1.5 Added sc_end_class to reset related status changes [sader1992]
+//= Resets skills, stats, or both with fancy styled dialogue.
 //============================================================
 prontera,150,193,4	script	Reset Girl	124,{
-	//	 		Skills,	Stats,	Both,	Limit
-	setarray .@Reset,	5000,	5000,	9000,	0;
-	mes "[Reset Girl]";
-	if(.@Reset[3] && reset_limit > .@Reset[3]) {
-		mes "Sorry you can only reset "+callfunc("F_InsertPlural",.@Reset[3],"time")+" in your life.";
-		close;
+	//        Skills, Stats, Both, Limit
+	setarray .@Reset, 50000, 50000, 90000, 0;
+
+	mes "^663399[ ~ Reset Girl ~ ]^000000";
+	mes "Welcome, ^00CCFF" + strcharinfo(0) + "^000000.";
+	mes "I am the elegant ^FF66CCReset Specialist^000000 of Rune Midgard.";
+	mes "Let me help you regain balance in your soul.";
+	mes " ";
+	mes "^AAAAAA+----------------------------+^000000";
+	mes "^FF9999 Reset ^FF9999Skills^000000: ^3399FF" + callfunc("F_InsertComma", .@Reset[0]) + " Zeny^000000";
+	mes "^FF9999 Reset ^FF9999Stats^000000: ^3399FF" + callfunc("F_InsertComma", .@Reset[1]) + " Zeny^000000";
+	mes "^FF9999 Reset ^FF9999Both^000000: ^3399FF" + callfunc("F_InsertComma", .@Reset[2]) + " Zeny^000000";
+	mes "^AAAAAA+----------------------------+^000000";
+	if (.@Reset[3]) {
+		mes "^FF4444Limit:^000000 Only ^FF0000" + .@Reset[3] + "^000000 reset" + ((.@Reset[3] > 1) ? "s" : "") + " per lifetime.";
+		mes "You've used ^FF0000" + reset_limit + "^000000 of them.";
 	}
-	mes "I am the Reset Girl.";
-	mes "Reset Stats: "+ callfunc("F_InsertComma",.@Reset[1]) +"z";
-	mes "Reset Skills: "+ callfunc("F_InsertComma",.@Reset[0]) +"z";
-	mes "Reset Both: "+ callfunc("F_InsertComma",.@Reset[2]) +"z";
-	if(.@Reset[3]) mes "You may only reset "+callfunc("F_InsertPlural",.@Reset[3],"time")+", so use "+((.@Reset[3]>1)?"them":"it")+" wisely.";
-	mes "Please select the service you want:";
+	mes " ";
+	mes "^3399FFPlease choose your desired service:^000000";
 	next;
-	set .@i,(select("^FF3355Reset Skills:Reset Stats:Reset Both^000000:Cancel"));
-	if(.@i > 3) close;
-	mes "[Reset Girl]";
-	if (Zeny < .@Reset[.@i-1]) {
-		mes "Sorry, you don't have enough Zeny.";
+
+	set .@i, select("^FF3355Reset Skills^000000:^33CC33Reset Stats^000000:^9966FFReset Both^000000:^777777Cancel^000000");
+	if (.@i > 3) close;
+
+	mes "^663399[ ~ Reset Girl ~ ]^000000";
+	if (Zeny < .@Reset[.@i - 1]) {
+		
+		mes "^FF0000Oops!^000000 You don't have enough ^990000Zeny^000000 for this service.";
 		close;
 	}
-	if(.@Reset[3]){
-		mes "You can only reset "+callfunc("F_InsertPlural",.@Reset[3],"time")+" in your life, are you sure?";
-		if(select("Let me think:That's fine") == 1) close;
+
+	if (.@Reset[3]) {
+		
+		mes "You only have ^FF0000" + (.@Reset[3] - reset_limit) + "^000000 reset" + ((.@Reset[3] - reset_limit) > 1 ? "s" : "") + " left.";
+		mes "Are you absolutely sure?";
+		if (select("^777777Let me think...^000000:^33CC66Yes, continue!^000000") == 1) close;
 	}
-	set Zeny, Zeny-.@Reset[.@i-1];
-	if(.@i&1){
+
+	set Zeny, Zeny - .@Reset[.@i - 1];
+
+	if (.@i & 1) {
 		sc_end_class;
 		ResetSkill;
 	}
-	if(.@i&2) ResetStatus;
-	mes "There you go!";
-	if(.@Reset[3]) set reset_limit,reset_limit + 1;
+	if (.@i & 2)
+		ResetStatus;
+	mes "^990000All done!^000000 You feel refreshed and renewed.";
+	if (.@Reset[3])
+		set reset_limit, reset_limit + 1;
+
 	close;
 }
