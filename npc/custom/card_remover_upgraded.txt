@@ -1,0 +1,409 @@
+//===== rAthena Script =======================================
+//= Card Removal NPC
+//===== By: ==================================================
+//= TyrNemesis^
+//===== Current Version: =====================================
+//= 1.4 - Added Card-Based Pricing and Item Requirements
+//===== Compatible With: =====================================
+//= rAthena Project
+//===== Description: =========================================
+//= Removes cards from equipped items with dynamic pricing and item requirements.
+//= Pricing: Normal=1M, Mini Boss=10M, MVP=50M
+//===== Additional Comments: =================================
+//= 1.0 First version. [TyrNemesis^]
+//= 1.2 Optimized and fixed getequipname menu. [Kisuka]
+//= 1.2a Added 'disable_items' command. [Euphy]
+//= 1.4 Added card-based pricing and item requirements. [Modified]
+//============================================================
+
+prontera,164,165,3	script	Wise Old Woman#eAcustom	78,{
+
+	// === CARD-BASED PRICING SYSTEM ===
+	// Define MVP card list (actual MVP card IDs)
+	.@mvp_list$ = "|4144|4147|4142|4132|4128|4143|4137|4123|4146|4131|4148|4121|4135|4318|4324|4168|4305|4276|4134|4330|4263|4236|4302|4342|4372|4357|4359|4361|4363|4367|4365|4352|4374|4376|4399|4386|4403|4407|4408|4419|4425|4430|4441|4145|";
+	
+	// Define Mini Boss card list (actual mini boss card IDs)
+	.@mini_boss_list$ = "|4047|4054|4241|4174|4197|4179|4306|4183|4266|4163|4169|4207|4250|4254|4238|4290|4320|4203|4171|4250|4423|4426|4427|4428|4440|";
+	
+	// Pricing constants
+	.@normal_price = 1000000;    // 1M Zeny for normal cards
+	.@mini_boss_price = 10000000; // 10M Zeny for mini boss cards
+	.@mvp_price = 50000000;       // 50M Zeny for MVP cards
+
+	set .faildestroy,1;      // should the card remover have a chance of failure that destroys items? (1=yes, 0=no)
+
+	// === RATE LIMITING TO PREVENT SPAM ===
+	.@last_use = getd("card_remover_" + getcharid(CHAR_ID_ACCOUNT));
+	.@current_time = gettimetick(2);
+	.@time_diff = .@current_time - .@last_use;
+	if(.@last_use > 0 && .@time_diff < 30) {
+		.@remaining_time = 30 - .@time_diff;
+		mes "[Wise Old Woman]";
+		mes "You are using my services too frequently.";
+		mes "Please wait " + .@remaining_time + " more seconds before trying again.";
+		close;
+	}
+	setd("card_remover_" + getcharid(CHAR_ID_ACCOUNT), .@current_time);
+
+	disable_items;
+	mes "[Wise Old Woman]";
+	mes "Good day, young one. I have the power to remove cards that you have compounded onto your equipment. Does this idea please you?";
+	next;
+	switch(select("Yes, it does.:What do you charge?:No thanks.")) {
+	case 1:
+		mes "[Wise Old Woman]";
+		mes "Very well. Which item shall I examine for you?";
+		next;
+
+		setarray .@indices[1], EQI_HEAD_TOP, EQI_ARMOR, EQI_HAND_L, EQI_HAND_R, EQI_GARMENT, EQI_SHOES, EQI_ACC_L, EQI_ACC_R, EQI_HEAD_MID, EQI_HEAD_LOW;
+		for( set .@i,1; .@i <= 10; set .@i,.@i+1 ) {
+			if( getequipisequiped(.@indices[.@i]) )
+				set .@menu$, .@menu$ + F_getpositionname(.@indices[.@i]) + "-[" + getequipname(.@indices[.@i]) + "]";
+			set .@menu$, .@menu$ + ":";
+		}
+		set .@part, .@indices[ select(.@menu$) ];
+		
+		// === EQUIPMENT VALIDATION ===
+		if(!getequipisequiped(.@part)) {
+			mes "[Wise Old Woman]";
+			mes "Young one... You're not wearing anything there that I can remove cards from.";
+			close;
+		}
+		
+		// Store original equipment state for security checks
+		.@original_item_id = getequipid(.@part);
+		.@original_card_count = getequipcardcnt(.@part);
+		
+		// Validate item exists and has cards
+		if(.@original_item_id <= 0) {
+			mes "[Wise Old Woman]";
+			mes "I cannot detect any valid item in that slot.";
+			close;
+		}
+		
+		if(.@original_card_count == 0) {
+			mes "[Wise Old Woman]";
+			mes "Young one... There are no cards compounded on this item. I can do nothing with it, I'm afraid.";
+			close;
+		}
+		
+		// Validate card count is reasonable (max 4 cards)
+		if(.@original_card_count > 4) {
+			mes "[Wise Old Woman]";
+			mes "This item has an unusual number of cards. I cannot process it safely.";
+			close;
+		}
+		
+		set .@cardcount, .@original_card_count;
+		
+		// === CARD-BASED PRICING CALCULATION ===
+		.@highest_price = .@normal_price; // Default to normal card price
+		.@highest_card_type$ = "Normal";
+		.@star_crumbs_needed = 5;  // Default for normal cards
+		.@yellow_gems_needed = 5;  // Default for normal cards
+		
+		// Check each card slot to find the highest value card
+		for(.@card_slot = 0; .@card_slot < .@cardcount; .@card_slot++) {
+			.@card_id = getequipcardid(.@part, .@card_slot);
+			if(.@card_id > 0) {
+				// Validate card ID is reasonable
+				if(.@card_id < 4000 || .@card_id > 5000) {
+					mes "[Wise Old Woman]";
+					mes "I detected an invalid card on this item. I cannot process it safely.";
+					close;
+				}
+				
+				// Check if it's an MVP card
+				if(compare(.@mvp_list$, "|" + .@card_id + "|")) {
+					.@highest_price = .@mvp_price;
+					.@highest_card_type$ = "MVP";
+					.@star_crumbs_needed = 20;
+					.@yellow_gems_needed = 20;
+				}
+				// Check if it's a Mini Boss card (only if not already MVP)
+				else if(compare(.@mini_boss_list$, "|" + .@card_id + "|") && .@highest_price < .@mvp_price) {
+					.@highest_price = .@mini_boss_price;
+					.@highest_card_type$ = "Mini Boss";
+					.@star_crumbs_needed = 10;
+					.@yellow_gems_needed = 10;
+				}
+				// Otherwise it's a normal card (price already set as default)
+			}
+		}
+		
+		// Calculate total cost based on highest value card
+		.@total_cost = .@highest_price;
+		
+		// === SECURITY CHECKS TO PREVENT EXPLOITS ===
+		// Check weight capacity - must be able to accommodate at least 10 items
+		// and not be 90% overweight
+		.@weight_percent = (weight * 100) / maxweight;
+		if(.@weight_percent > 90) {
+			mes "[Wise Old Woman]";
+			mes "You are carrying too much weight (" + .@weight_percent + "% of capacity).";
+			mes "Please reduce your weight to below 90% before using my services.";
+			close;
+		}
+		
+		// Check if inventory can accommodate at least 10 items
+		if(!checkweight(1202, 10)) {
+			mes "[Wise Old Woman]";
+			mes "Your inventory is too full to accommodate the items.";
+			mes "Please make space for at least 10 items before using my services.";
+			close;
+		}
+		
+		// Additional weight check for the actual card count
+		if (!checkweight(1202,(.@cardcount+1))) { 
+			mes "[Wise Old Woman]";
+			mes "I can't offer any of my services because you're carrying too much weight.";
+			mes "Please store some items in Kafra Storage and come again.";
+			close;
+		}
+		
+		mes "[Wise Old Woman]";
+		mes "This item has " + .@cardcount + " cards compounded on it.";
+		mes "Based on the highest value card (" + .@highest_card_type$ + "), the paid service costs " + callfunc("F_InsertComma", .@total_cost) + " zeny.";
+		mes "";
+		mes "I offer two services:";
+		mes "^0000FFPaid Service^000000: 10% failure rate, you can choose which card to save if it fails.";
+		mes "^FF0000Free Service^000000: 90% failure rate, everything is lost if it fails.";
+		next;
+		
+		switch(select("Paid Service (" + callfunc("F_InsertComma", .@total_cost) + " Zeny):Free Service (No Cost):Cancel")) {
+		case 1:
+			// === PAID SERVICE ===
+			// Security check: Verify equipment hasn't changed
+			if(getequipid(.@part) != .@original_item_id) {
+				mes "[Wise Old Woman]";
+				mes "You changed your equipment during our conversation.";
+				mes "For security reasons, the service has been cancelled.";
+				close;
+			}
+			
+			// Security check: Verify card count hasn't changed
+			if(getequipcardcnt(.@part) != .@original_card_count) {
+				mes "[Wise Old Woman]";
+				mes "The number of cards on your item has changed.";
+				mes "For security reasons, the service has been cancelled.";
+				close;
+			}
+			
+			// Check zeny requirement
+			if(zeny < .@total_cost) {
+				mes "[Wise Old Woman]";
+				mes "You don't have enough zeny for the paid service.";
+				mes "You need " + callfunc("F_InsertComma", .@total_cost) + " zeny, but you only have " + callfunc("F_InsertComma", zeny) + " zeny.";
+				close;
+			}
+			
+			// Check item requirements for paid service
+			if(countitem(1000) < .@star_crumbs_needed) {
+				mes "[Wise Old Woman]";
+				mes "You don't have enough Star Crumbs for the paid service.";
+				mes "You need " + .@star_crumbs_needed + " Star Crumbs, but you only have " + countitem(1000) + ".";
+				close;
+			}
+			
+			if(countitem(715) < .@yellow_gems_needed) {
+				mes "[Wise Old Woman]";
+				mes "You don't have enough Yellow Gemstones for the paid service.";
+				mes "You need " + .@yellow_gems_needed + " Yellow Gemstones, but you only have " + countitem(715) + ".";
+				close;
+			}
+			
+			mes "[Wise Old Woman]";
+			mes "Very well. I shall perform the paid service.";
+			mes "Since you paid for the service, you can choose which card to save in case of failure.";
+			mes "This choice will be preserved even if something goes wrong during the process.";
+			next;
+			
+			// === CHOOSE CARD TO SAVE BEFORE REMOVAL PROCESS ===
+			mes "[Wise Old Woman]";
+			mes "Which card would you like to save if the process fails?";
+			mes "This card will be returned to you even if everything else is lost.";
+			next;
+			
+			// Build card selection menu
+			.@menu$ = "";
+			for(.@i = 0; .@i < .@cardcount; .@i++) {
+				.@card_id = getequipcardid(.@part, .@i);
+				if(.@card_id > 0) {
+					.@menu$ = .@menu$ + "Card " + (.@i + 1) + " [" + getitemname(.@card_id) + "]:";
+				}
+			}
+			.@menu$ = .@menu$ + "Cancel";
+			
+			.@selected_card = select(.@menu$) - 1;
+			if(.@selected_card >= .@cardcount) {
+				mes "[Wise Old Woman]";
+				mes "You cancelled the selection. The service has been cancelled.";
+				close;
+			}
+			
+			// Store the selected card ID for potential failure
+			.@saved_card_id = getequipcardid(.@part, .@selected_card);
+			if(.@saved_card_id <= 0) {
+				mes "[Wise Old Woman]";
+				mes "Invalid card selection. The service has been cancelled.";
+				close;
+			}
+			
+			mes "[Wise Old Woman]";
+			mes "You have chosen to save: " + getitemname(.@saved_card_id);
+			mes "I will now begin the removal process...";
+			next;
+			
+			// Final security check before payment
+			if(getequipid(.@part) != .@original_item_id) {
+				mes "[Wise Old Woman]";
+				mes "You changed your equipment during our conversation.";
+				mes "For security reasons, the service has been cancelled.";
+				close;
+			}
+			
+			// Deduct payment and items
+			set Zeny, Zeny - .@total_cost;
+			delitem 1000, .@star_crumbs_needed; // Star Crumbs
+			delitem 715, .@yellow_gems_needed;  // Yellow Gemstones
+			
+			// Store all card information for potential failure
+			for(.@i = 0; .@i < .@cardcount; .@i++) {
+				.@card_ids[.@i] = getequipcardid(.@part, .@i);
+			}
+			
+			// 10% failure rate for paid service
+			.@failchance = rand(100);
+			if(.@failchance < 10) {
+				// PAID SERVICE FAILED - Return the pre-selected card
+				mes "[Wise Old Woman]";
+				mes "Oh no! The process has failed...";
+				mes "But I managed to save your chosen card as promised.";
+				next;
+				
+				// Final weight check before giving card back
+				if(!checkweight(1202, 1)) {
+					mes "[Wise Old Woman]";
+					mes "Your inventory is too full to receive the saved card.";
+					mes "The card has been lost due to insufficient space.";
+					close;
+				}
+				
+				// Give the pre-selected card back
+				getitem .@saved_card_id, 1;
+				mes "[Wise Old Woman]";
+				mes "Here is your saved " + getitemname(.@saved_card_id) + ".";
+				mes "The item and other cards were destroyed in the process.";
+				mes "I'm sorry for the failure, but at least your chosen card is safe.";
+				close;
+			}
+			
+			// PAID SERVICE SUCCESS
+			successremovecards .@part;
+			mes "[Wise Old Woman]";
+			mes "Excellent! The paid service was successful.";
+			mes "Here are your cards and your item. Farewell.";
+			close;
+			
+		case 2:
+			// === FREE SERVICE ===
+			// Security check: Verify equipment hasn't changed
+			if(getequipid(.@part) != .@original_item_id) {
+				mes "[Wise Old Woman]";
+				mes "You changed your equipment during our conversation.";
+				mes "For security reasons, the service has been cancelled.";
+				close;
+			}
+			
+			// Security check: Verify card count hasn't changed
+			if(getequipcardcnt(.@part) != .@original_card_count) {
+				mes "[Wise Old Woman]";
+				mes "The number of cards on your item has changed.";
+				mes "For security reasons, the service has been cancelled.";
+				close;
+			}
+			
+			// Check item requirements for free service (1 each)
+			if(countitem(1000) < 1) {
+				mes "[Wise Old Woman]";
+				mes "You need at least 1 Star Crumb for the free service.";
+				close;
+			}
+			
+			if(countitem(715) < 1) {
+				mes "[Wise Old Woman]";
+				mes "You need at least 1 Yellow Gemstone for the free service.";
+				close;
+			}
+			
+			// Check weight before free service
+			if(!checkweight(1202, (.@cardcount+1))) {
+				mes "[Wise Old Woman]";
+				mes "Your inventory is too full to accommodate the items.";
+				mes "Please make space and try again.";
+				close;
+			}
+			
+			mes "[Wise Old Woman]";
+			mes "Very well. I shall perform the free service.";
+			mes "But be warned - there's a 90% chance of failure!";
+			mes "If it fails, everything will be lost.";
+			next;
+			
+			if(select("I understand the risk. Proceed.:Cancel") == 2) {
+				mes "[Wise Old Woman]";
+				mes "Very well. Return when you're ready to take the risk.";
+				close;
+			}
+			
+			// Final security check before free service
+			if(getequipid(.@part) != .@original_item_id) {
+				mes "[Wise Old Woman]";
+				mes "You changed your equipment during our conversation.";
+				mes "For security reasons, the service has been cancelled.";
+				close;
+			}
+			
+			// Deduct items for free service
+			delitem 1000, 1; // 1 Star Crumb
+			delitem 715, 1;  // 1 Yellow Gemstone
+			
+			// 90% failure rate for free service
+			.@failchance = rand(100);
+			if(.@failchance < 90) {
+				// FREE SERVICE FAILED - Everything lost
+				failedremovecards .@part, 0;
+				mes "[Wise Old Woman]";
+				mes "Oh no! The free service has failed...";
+				mes "I'm afraid the item and all cards have been destroyed.";
+				mes "This is why I recommend the paid service next time.";
+				close;
+			}
+			
+			// FREE SERVICE SUCCESS (10% chance)
+			successremovecards .@part;
+			mes "[Wise Old Woman]";
+			mes "Incredible! The free service was successful!";
+			mes "Here are your cards and your item. You got lucky this time!";
+			close;
+			
+		case 3:
+			mes "[Wise Old Woman]";
+			mes "Very well. Return at once if you seek my services.";
+			close;
+		}
+	case 2:
+		mes "[Wise Old Woman]";
+		mes "My pricing is based on the highest value card in your item:";
+		mes "- Normal Cards: " + callfunc("F_InsertComma", .@normal_price) + " Zeny (5 Star Crumbs, 5 Yellow Gemstones)";
+		mes "- Mini Boss Cards: " + callfunc("F_InsertComma", .@mini_boss_price) + " Zeny (10 Star Crumbs, 10 Yellow Gemstones)";
+		mes "- MVP Cards: " + callfunc("F_InsertComma", .@mvp_price) + " Zeny (20 Star Crumbs, 20 Yellow Gemstones)";
+		mes "";
+		mes "Free service requires: 1 Star Crumb, 1 Yellow Gemstone";
+		close;
+	case 3:
+		mes "[Wise Old Woman]";
+		mes "Very well. Return at once if you seek my services.";
+		close;
+	}
+}
