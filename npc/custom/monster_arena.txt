@@ -12,42 +12,151 @@ switch(select("^000088Enter Arena^000000:How many is my Arena Points:Information
 case 1:
 	next;
 	mes "[^880000Arena Master^000000]";
-	mes "I will require 10,000,000 Zeny per entry.";
-	mes "Do you have it with you??";
-	if(select("Yes","No")==2){ goto L_Later; }
-	next;
-		if ( Zeny < 10000000 ) {
+	mes "Choose your access type:";
+	mes " ";
+	mes "^FF8800One-time Entry^000000 - 30,000,000 Zeny";
+	mes "If you die, you will have to pay again.";
+	mes " ";
+	mes "^FF8800One-day Unlimited Access^000000 - 150,000,000 Zeny";
+	mes "Allows unlimited entry for 24 hours upon registration.";
+	mes " ";
+	mes "^FF8800Note:^000000 You can farm for 4 hours every 24 hours.";
+	mes "Time only moves while inside the arena.";
+	mes "After 4 hours, there's a 12-hour cooldown.";
+	mes "Access is restricted per IP address.";
+	
+	switch(select("One-time Entry:One-day Unlimited Access:Cancel")){
+	case 1:
+		// One-time entry
+		next;
+		mes "[^880000Arena Master^000000]";
+		mes "One-time entry costs 30,000,000 Zeny.";
+		mes "Do you have enough zeny?";
+		if(select("Yes","No")==2){ goto L_Later; }
+		next;
+		
+		if ( Zeny < 30000000 ) {
 			mes "[^880000Arena Master^000000]";
 			mes "You don't have enough zeny.";
-        		mes "You need to pay 100,000,000 zeny. ";
-		close;
+			mes "You need 30,000,000 zeny for one-time entry.";
+			close;
 		}
-		if( #arenaRoomDelay > gettimetick(2) ){
-			set .last,#arenaRoomDelay - gettimetick(2);
-			set .@min, .last % ( 24 * 3600 ) % 3600 / (60);
-			set .@minutes, .last / 60;
-			set .@hourss, .@minutes / 60;
+		
+		// Check IP restrictions
+		if( #arenaIPCooldown > gettimetick(2) ){
+			set .last,#arenaIPCooldown - gettimetick(2);
+			set .@hours, .last / 3600;
+			set .@minutes, (.last % 3600) / 60;
 			next;
-			mes "[^0055FF ::: Arena Master ::: ^000000]";
-			mes "Wait for ^FF0000"+.@hourss+" Hours OR "+.@minutes+" Minutes OR "+ .last + " Seconds before Entering^000000.";
-			close;	
-		}else
-		{
-			announce "[Monster Arena] "+strcharinfo(0)+" Has Entered Monster Arena.",0,0xFF6600;
-                   	set Zeny, Zeny - 10000000;
-			set #allowarenaroom, 1;
-                    	warp "bat_b02" ,0,0;
-			end;
-               	}
+			mes "[^880000Arena Master^000000]";
+			mes "Your IP address is on cooldown.";
+			mes "Wait ^FF0000"+.@hours+" hours and "+.@minutes+" minutes^000000 before entering again.";
+			close;
+		}
+		
+		// Check if player has active unlimited access
+		if( #arenaUnlimitedAccess > gettimetick(2) ){
+			next;
+			mes "[^880000Arena Master^000000]";
+			mes "You have active unlimited access until:";
+			mes "^008800"+atcommand("@time "+#arenaUnlimitedAccess)+"^000000";
+			mes " ";
+			mes "Do you want to use your unlimited access instead?";
+			if(select("Yes","No")==1){
+				goto unlimited_access_check;
+			}
+		}
+		
+		// Check farming time limit
+		if( #arenaFarmingTime >= 14400 ){ // 4 hours = 14400 seconds
+			next;
+			mes "[^880000Arena Master^000000]";
+			mes "You have reached your 4-hour farming limit.";
+			mes "You must wait 12 hours before farming again.";
+			close;
+		}
+		
+		// Proceed with one-time entry
+		announce "[Monster Arena] "+strcharinfo(0)+" Has Entered Monster Arena (One-time Entry).",0,0xFF6600;
+		set Zeny, Zeny - 30000000;
+		set #allowarenaroom, 1;
+		set #arenaEntryType, 1; // 1 = one-time entry
+		warp "bat_b02" ,0,0;
+		end;
+		
+	case 2:
+		// One-day unlimited access
+		next;
+		mes "[^880000Arena Master^000000]";
+		mes "One-day unlimited access costs 150,000,000 Zeny.";
+		mes "This allows unlimited entry for 24 hours.";
+		mes "Do you have enough zeny?";
+		if(select("Yes","No")==2){ goto L_Later; }
+		next;
+		
+		if ( Zeny < 150000000 ) {
+			mes "[^880000Arena Master^000000]";
+			mes "You don't have enough zeny.";
+			mes "You need 150,000,000 zeny for unlimited access.";
+			close;
+		}
+		
+		// Check IP restrictions
+		if( #arenaIPCooldown > gettimetick(2) ){
+			set .last,#arenaIPCooldown - gettimetick(2);
+			set .@hours, .last / 3600;
+			set .@minutes, (.last % 3600) / 60;
+			next;
+			mes "[^880000Arena Master^000000]";
+			mes "Your IP address is on cooldown.";
+			mes "Wait ^FF0000"+.@hours+" hours and "+.@minutes+" minutes^000000 before entering again.";
+			close;
+		}
+		
+		// Check farming time limit
+		if( #arenaFarmingTime >= 14400 ){ // 4 hours = 14400 seconds
+			next;
+			mes "[^880000Arena Master^000000]";
+			mes "You have reached your 4-hour farming limit.";
+			mes "You must wait 12 hours before farming again.";
+			close;
+		}
+		
+		// Proceed with unlimited access
+		announce "[Monster Arena] "+strcharinfo(0)+" Has Purchased Unlimited Arena Access.",0,0xFF6600;
+		set Zeny, Zeny - 150000000;
+		set #arenaUnlimitedAccess, gettimetick(2) + (24 * 3600); // 24 hours
+		set #allowarenaroom, 1;
+		set #arenaEntryType, 2; // 2 = unlimited access
+		warp "bat_b02" ,0,0;
+		end;
+		
+	case 3:
+		goto L_Later;
+	}
 break;
 
+unlimited_access_check:
+	// Check farming time limit
+	if( #arenaFarmingTime >= 14400 ){ // 4 hours = 14400 seconds
+		next;
+		mes "[^880000Arena Master^000000]";
+		mes "You have reached your 4-hour farming limit.";
+		mes "You must wait 12 hours before farming again.";
+		close;
+	}
+	
+	// Proceed with unlimited access
+	announce "[Monster Arena] "+strcharinfo(0)+" Has Entered Monster Arena (Unlimited Access).",0,0xFF6600;
+	set #allowarenaroom, 1;
+	set #arenaEntryType, 2; // 2 = unlimited access
+	warp "bat_b02" ,0,0;
+	end;
 
 L_Later:
 mes "[^880000Arena Master^000000]";
-mes "Dont waste my time!..";
+mes "Don't waste my time!..";
 close;
-
-
 
 case 2:
 	next;
@@ -56,8 +165,8 @@ case 2:
 	next;
 	goto strt;
 break;
-//==========================================information==============================================
 
+//==========================================information==============================================
 case 3:
 next;
 mes "[^880000Arena Master^000000]";
@@ -77,204 +186,185 @@ mes "--------------------------------------";
 mes "Non Boss Monster respawn after 3 Minutes after killing the monster.";
 mes "--------------------------------------";
 mes "No Monster drops in the Monster Arena.";
-//next;
-//	mes "[^880000Arena Master^000000]";
-//      	mes "^FF000010% of your Arena Points will lose when you die!^000000 ";
-//	sleep2 3000;
-
 next;
-	mes "[^0055FF ::: Arena Master ::: ^000000]";
-	mes "You are only allowed to gather a maximum of 250 Arena Points. After gaining 250 Arena Points. You must wait 3 hours before re-enter again.";
-	Sleep2 5000;
-	next;
-	mes "[^0055FF ::: Arena Master ::: ^000000]";
-	mes "You already accumulated "+ #arenapointscount +" Points.";
-	mes "^FF0000[NOT YOUR ACTUAL ARENA POINTS BUT ONLY A COUNTER HOW MANY YOU ACCUMULATED BEFORE YOU WILL REACH 250 Points before THE 3 HOURS DELAY]^000000";
-	sleep2 5000;
-    next;
+mes "[^0055FF ::: Arena Master ::: ^000000]";
+mes "Access Types:";
+mes "^FF8800One-time Entry^000000 - 30,000,000 Zeny";
+mes "  • Single entry, pay again if you die";
+mes "^FF8800One-day Unlimited Access^000000 - 150,000,000 Zeny";
+mes "  • Unlimited entry for 24 hours";
+next;
+mes "[^0055FF ::: Arena Master ::: ^000000]";
+mes "Farming Limits:";
+mes "• Maximum 4 hours of farming per 24 hours";
+mes "• Time only counts while inside the arena";
+mes "• 12-hour cooldown after 4 hours";
+mes "• IP-based restrictions apply";
+next;
+mes "[^0055FF ::: Arena Master ::: ^000000]";
+mes "Your current farming time: ^FF8800"+(#arenaFarmingTime/3600)+" hours and "+((#arenaFarmingTime%3600)/60)+" minutes^000000";
+if( #arenaUnlimitedAccess > gettimetick(2) ){
+	mes "Unlimited access until: ^008800"+atcommand("@time "+#arenaUnlimitedAccess)+"^000000";
+}
+next;
 goto strt;
 }
 
+// OnPCDieEvent - Handle death in arena
+OnPCDieEvent:
+	.@killerrid = killerrid;
+	if (strcharinfo(3) == "bat_b02" && .@killerrid != getcharid(3)) {
+		// Check if it was a one-time entry
+		if( #arenaEntryType == 1 ){
+			dispbottom "You died! Your one-time entry has expired.";
+			dispbottom "You must pay again to re-enter the arena.";
+		} else {
+			dispbottom "You died! Your unlimited access remains active.";
+		}
+		set #allowarenaroom, 0;
+		warp "prontera",156,191;
+	}
+	end;
 
-
-//OnPCDieEvent:
-//        .@killerrid = killerrid;
-//        if (strcharinfo(3) == "bat_b02" && .@killerrid != getcharid(3)) {
-//		if ( #arenapoints >= 20){
-//			set #arenapoints, #arenapoints - ((10 * #arenapoints) / 100);
-//            		dispbottom "You died, you lost 10% of your Arena points. Your Arena points now is " +#arenapoints;
-//			warp "prontera",156,191;
-//			end;
-//		}
-//            	dispbottom "You died, No deduction on your gold points. Your Gold points is " +#arenapoints;
-//		warp "prontera",156,191;
-//        }
-//        end;
-
-
+// OnPCLogoutEvent - Handle logout in arena
+OnPCLogoutEvent:
+	if (strcharinfo(3) == "bat_b02") {
+		set #allowarenaroom, 0;
+	}
+	end;
 }
 
+// Arena exit warp script
+//bat_b02,389,2,0	warp	retransfer	1,1,prontera,156,191
+//bat_b02,17,290,0	warp	retransfer1	1,1,prontera,156,191
 
+// Timer script to track farming time
+-	script	arena_timer	-1,{
+	OnTimer1000:
+		if( strcharinfo(3) == "bat_b02" && #allowarenaroom == 1 ){
+			set #arenaFarmingTime, #arenaFarmingTime + 1;
+			
+			// Check if 4 hours reached
+			if( #arenaFarmingTime >= 14400 ){
+				announce "[Monster Arena] "+strcharinfo(0)+" has reached the 4-hour farming limit and will be removed from arena.",0,0xFF0000;
+				set #arenaIPCooldown, gettimetick(2) + (12 * 3600); // 12-hour cooldown
+				set #arenaFarmingTime, 0;
+				set #allowarenaroom, 0;
+				warp "prontera",156,191;
+				dispbottom "You have reached your 4-hour farming limit. 12-hour cooldown activated.";
+			}
+		}
+		initnpctimer;
+		end;
+}
 
-
-
+// Monster kill scripts with updated point system
 -	script	ifrit_main	-1,{
    OnKill:
-	if ( (#arenapointscount >= 250) && (#arenaRoomDelay < gettimetick(2)) ){
-		dispbottom "You already reached 250 Arena Points. You may come back again after 3 hours.";
-		set #arenaRoomDelay,gettimetick(2) + ( 180 * 60 );
-		#arenapointscount = 0;
-		warp "prontera",156,191;
-		set #allowarenaroom, 0;
-		end;
-	}
+	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
 		.@point = 50;
 		#arenapoints += .@point;
-		#arenapointscount += .@point;
 		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+	}
 	end;
 }
+
 -	script	valk_main	-1,{
    OnKill:
-	if ( (#arenapointscount >= 250) && (#arenaRoomDelay < gettimetick(2)) ){
-		dispbottom "You already reached 250 Arena Points. You may come back again after 3 hours.";
-		set #arenaRoomDelay,gettimetick(2) + ( 180 * 60 );
-		#arenapointscount = 0;
-		warp "prontera",156,191;
-		set #allowarenaroom, 0;
-		end;
-	}
+	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
 		.@point = 50;
 		#arenapoints += .@point;
-		#arenapointscount += .@point;
 		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+	}
 	end;
 }
+
 -	script	bapho_main	-1,{
    OnKill:
-	if ( (#arenapointscount >= 250) && (#arenaRoomDelay < gettimetick(2)) ){
-		dispbottom "You already reached 250 Arena Points. You may come back again after 3 hours.";
-		set #arenaRoomDelay,gettimetick(2) + ( 180 * 60 );
-		#arenapointscount = 0;
-		warp "prontera",156,191;
-		set #allowarenaroom, 0;
-		end;
-	}
+	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
 		.@point = 100;
 		#arenapoints += .@point;
-		#arenapointscount += .@point;
 		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+	}
 	end;
 }
+
 -	script	ktull_main	-1,{
    OnKill:
-	if ( (#arenapointscount >= 250) && (#arenaRoomDelay < gettimetick(2)) ){
-		dispbottom "You already reached 250 Arena Points. You may come back again after 3 hours.";
-		set #arenaRoomDelay,gettimetick(2) + ( 180 * 60 );
-		#arenapointscount = 0;
-		warp "prontera",156,191;
-		set #allowarenaroom, 0;
-		end;
-	}
+	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
 		.@point = 50;
 		#arenapoints += .@point;
-		#arenapointscount += .@point;
 		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+	}
 	end;
 }
+
 -	script	beelze_main	-1,{
    OnKill:
-	if ( (#arenapointscount >= 250) && (#arenaRoomDelay < gettimetick(2)) ){
-		dispbottom "You already reached 250 Arena Points. You may come back again after 3 hours.";
-		set #arenaRoomDelay,gettimetick(2) + ( 180 * 60 );
-		#arenapointscount = 0;
-		warp "prontera",156,191;
-		set #allowarenaroom, 0;
-		end;
-	}
+	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
 		.@point = 50;
 		#arenapoints += .@point;
-		#arenapointscount += .@point;
 		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+	}
 	end;
 }
+
 -	script	sword_main	-1,{
    OnKill:
-	if ( (#arenapointscount >= 250) && (#arenaRoomDelay < gettimetick(2)) ){
-		dispbottom "You already reached 250 Arena Points. You may come back again after 3 hours.";
-		set #arenaRoomDelay,gettimetick(2) + ( 180 * 60 );
-		#arenapointscount = 0;
-		warp "prontera",156,191;
-		set #allowarenaroom, 0;
-		end;
-	}
+	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
 		.@point = 4;
 		#arenapoints += .@point;
-		#arenapointscount += .@point;
 		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+	}
 	end;
 }
+
 -	script	bow_main	-1,{
    OnKill:
-	if ( (#arenapointscount >= 250) && (#arenaRoomDelay < gettimetick(2)) ){
-		dispbottom "You already reached 250 Arena Points. You may come back again after 3 hours.";
-		set #arenaRoomDelay,gettimetick(2) + ( 180 * 60 );
-		#arenapointscount = 0;
-		warp "prontera",156,191;
-		set #allowarenaroom, 0;
-		end;
-	}
+	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
 		.@point = 4;
 		#arenapoints += .@point;
-		#arenapointscount += .@point;
 		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+	}
 	end;
 }
+
 -	script	ice_main	-1,{
    OnKill:
-	if ( (#arenapointscount >= 250) && (#arenaRoomDelay < gettimetick(2)) ){
-		dispbottom "You already reached 250 Arena Points. You may come back again after 3 hours.";
-		set #arenaRoomDelay,gettimetick(2) + ( 180 * 60 );
-		#arenapointscount = 0;
-		warp "prontera",156,191;
-		set #allowarenaroom, 0;
-		end;
-	}
+	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
 		.@point = 4;
 		#arenapoints += .@point;
-		#arenapointscount += .@point;
 		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+	}
 	end;
 }
+
 -	script	flower_main	-1,{
    OnKill:
-	if ( (#arenapointscount >= 250) && (#arenaRoomDelay < gettimetick(2)) ){
-		dispbottom "You already reached 250 Arena Points. You may come back again after 3 hours.";
-		set #arenaRoomDelay,gettimetick(2) + ( 180 * 60 );
-		#arenapointscount = 0;
-		warp "prontera",156,191;
-		set #allowarenaroom, 0;
-		end;
-	}
+	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
 		.@point = 20;
 		#arenapoints += .@point;
-		#arenapointscount += .@point;
 		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+	}
 	end;
 }
 
-
+// Map flags
 bat_b02	mapflag	noloot
 bat_b02	mapflag	nomobloot
 bat_b02	mapflag	nomvploot
 bat_b02	mapflag	noexp
 bat_b02	mapflag	nobaseexp
 bat_b02	mapflag	nojobexp
+bat_b02	mapflag	nobranch
+bat_b02	mapflag	noreturn
+bat_b02	mapflag	noteleport
+bat_b02	mapflag	nowarp
+
 
 //===========================spawn monster========================
 bat_b02,0,0,0,0	monster	Arena Ifrit	1832,2,19800000,600000,"ifrit_main::OnKill"
 bat_b02,0,0,0,0	monster	Arena Valkyrie Randgris	1751,2,14400000,600000,"valk_main::OnKill"
-//bat_b02,0,0,0,0	monster	Arena Great Demon Baphomet	1929,2,19800000,600000,"bapho_main::OnKill"
 bat_b02,0,0,0,0	monster	Arena Ktullanux	1779,5,14400000,600000,"ktull_main::OnKill"
 bat_b02,0,0,0,0	monster	Arena Beelzebub	1873,2,19800000,600000,"beelze_main::OnKill"
 bat_b02,0,0,0,0	monster	Arena Sword Guardian	1949,30,180000,0,"sword_main::OnKill"
@@ -282,6 +372,11 @@ bat_b02,0,0,0,0	monster	Arena Bow Guardian	1950,30,180000,0,"bow_main::OnKill"
 bat_b02,0,0,0,0	monster	Arena Ice Titan	1788,25,180000,0,"ice_main::OnKill"
 bat_b02,0,0,0,0	monster	Arena Blue Flower	1934,5,600000,0,"flower_main::OnKill"
 
+//===========================random warp portals========================
+//bat_b02,9,283,0	warp	retransfer2	1,1,bat_b02,0,0
+//bat_b02,389,6,0	warp	retransfer3	1,1,bat_b02,0,0
+
 
 bat_b02,389,2,0	warp	retransfer	1,1,bat_b02,0,0
 bat_b02,17,290,0	warp	retransfer1	1,1,bat_b02,0,0
+
