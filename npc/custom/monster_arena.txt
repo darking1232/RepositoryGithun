@@ -1,4 +1,7 @@
 prontera,163,145,4	script	Monster Arena	450,{
+	// Create monster_arena_ip table if it doesn't exist
+	query_sql "CREATE TABLE IF NOT EXISTS monster_arena_ip (account_id INT PRIMARY KEY, cooldown_start DATETIME NOT NULL, cooldown_end DATETIME NOT NULL, INDEX idx_cooldown (cooldown_end))";
+	
 // Function to check and report farming time violations
 
 //cutin "arena_01",2;
@@ -80,11 +83,17 @@ case 1:
 			close;
 		}
 		
-		// Check IP restrictions using account-based system
-		if( getd("#arena_ip_cooldown_"+getcharid(3)) > gettimetick(2) ){
-			set .last, getd("#arena_ip_cooldown_"+getcharid(3)) - gettimetick(2);
-			set .@hours, .last / 3600;
-			set .@minutes, (.last % 3600) / 60;
+		// Check IP restrictions using login.last_ip
+		.@player_ip = getcharip();
+		query_sql "SELECT a.account_id FROM login l INNER JOIN monster_arena_ip a ON l.account_id = a.account_id WHERE l.last_ip = '"+.@player_ip+"' AND a.cooldown_end > NOW() ORDER BY a.cooldown_end DESC LIMIT 1";
+		
+		if($@num_rows > 0){
+			// Calculate remaining cooldown time
+			query_sql "SELECT TIMESTAMPDIFF(SECOND, NOW(), cooldown_end) as remaining FROM monster_arena_ip WHERE account_id = $@account_id AND cooldown_end > NOW()";
+			set .@remaining_seconds, $@remaining;
+			set .@hours, .@remaining_seconds / 3600;
+			set .@minutes, (.@remaining_seconds % 3600) / 60;
+			
 			next;
 			mes "[^880000Arena Master^000000]";
 			mes "Your IP address is on cooldown.";
@@ -98,8 +107,8 @@ case 1:
 			if( getd("#arena_cooldown_start_"+getcharid(3)) == 0 ){
 				setd "#arena_cooldown_start_"+getcharid(3), gettimetick(2);
 			}
-			// Set IP cooldown to prevent multiple account abuse
-			setd "#arena_ip_cooldown_"+getcharid(3), gettimetick(2) + (12 * 3600); // 12 hours
+			// Set IP cooldown in database to prevent multiple account abuse
+			query_sql "INSERT INTO monster_arena_ip (account_id, cooldown_start, cooldown_end) VALUES ("+getcharid(3)+", NOW(), DATE_ADD(NOW(), INTERVAL 12 HOUR)) ON DUPLICATE KEY UPDATE cooldown_end = DATE_ADD(NOW(), INTERVAL 12 HOUR)";
 			next;
 			mes "[^880000Arena Master^000000]";
 			mes "You have reached your 4-hour[6 Hours for VIP] farming limit.";
@@ -119,7 +128,7 @@ case 1:
 			} else {
 				// Cooldown expired, reset it
 				setd "#arena_cooldown_start_"+getcharid(3), 0;
-				setd "#arena_ip_cooldown_"+getcharid(3), 0;
+				query_sql "DELETE FROM monster_arena_ip WHERE account_id = "+getcharid(3);
 				setd "#arena_farming_time_"+getcharid(3), 0;
 			}
 		}
@@ -193,11 +202,17 @@ case 1:
 			close;
 		}
 		
-		// Check IP restrictions using account-based system
-		if( getd("#arena_ip_cooldown_"+getcharid(3)) > gettimetick(2) ){
-			set .last, getd("#arena_ip_cooldown_"+getcharid(3)) - gettimetick(2);
-			set .@hours, .last / 3600;
-			set .@minutes, (.last % 3600) / 60;
+		// Check IP restrictions using login.last_ip
+		.@player_ip = getcharip();
+		query_sql "SELECT a.account_id FROM login l INNER JOIN monster_arena_ip a ON l.account_id = a.account_id WHERE l.last_ip = '"+.@player_ip+"' AND a.cooldown_end > NOW() ORDER BY a.cooldown_end DESC LIMIT 1";
+		
+		if($@num_rows > 0){
+			// Calculate remaining cooldown time
+			query_sql "SELECT TIMESTAMPDIFF(SECOND, NOW(), cooldown_end) as remaining FROM monster_arena_ip WHERE account_id = $@account_id AND cooldown_end > NOW()";
+			set .@remaining_seconds, $@remaining;
+			set .@hours, .@remaining_seconds / 3600;
+			set .@minutes, (.@remaining_seconds % 3600) / 60;
+			
 			next;
 			mes "[^880000Arena Master^000000]";
 			mes "Your IP address is on cooldown.";
@@ -211,8 +226,8 @@ case 1:
 			if( getd("#arena_cooldown_start_"+getcharid(3)) == 0 ){
 				setd "#arena_cooldown_start_"+getcharid(3), gettimetick(2);
 			}
-			// Set IP cooldown to prevent multiple account abuse
-			setd "#arena_ip_cooldown_"+getcharid(3), gettimetick(2) + (12 * 3600); // 12 hours
+			// Set IP cooldown in database to prevent multiple account abuse
+			query_sql "INSERT INTO monster_arena_ip (account_id, cooldown_start, cooldown_end) VALUES ("+getcharid(3)+", NOW(), DATE_ADD(NOW(), INTERVAL 12 HOUR)) ON DUPLICATE KEY UPDATE cooldown_end = DATE_ADD(NOW(), INTERVAL 12 HOUR)";
 			next;
 			mes "[^880000Arena Master^000000]";
 			mes "You have reached your 4-hour[6 Hours for VIP] farming limit.";
@@ -232,7 +247,7 @@ case 1:
 			} else {
 				// Cooldown expired, reset it
 				setd "#arena_cooldown_start_"+getcharid(3), 0;
-				setd "#arena_ip_cooldown_"+getcharid(3), 0;
+				query_sql "DELETE FROM monster_arena_ip WHERE account_id = "+getcharid(3);
 				setd "#arena_farming_time_"+getcharid(3), 0;
 			}
 		}
@@ -296,7 +311,7 @@ unlimited_access_check:
 		}
 		next;
 		mes "[^880000Arena Master^000000]";
-		mes "You have reached your 4-hour farming limit.";
+		mes "You have reached your 4-hour[6 Hours for VIP] farming limit.";
 		mes "You must wait 12 hours before farming again.";
 		close;
 	}
@@ -313,7 +328,7 @@ unlimited_access_check:
 		} else {
 			// Cooldown expired, reset it
 				setd "#arena_cooldown_start_"+getcharid(3), 0;
-				setd "#arena_ip_cooldown_"+getcharid(3), 0;
+				query_sql "DELETE FROM monster_arena_ip WHERE account_id = "+getcharid(3);
 				setd "#arena_farming_time_"+getcharid(3), 0;
 		}
 	}
@@ -494,7 +509,13 @@ case 5:
 	mes "Arena Access: "+getd("#arena_access_"+.@target_account);
 	mes "Unlimited Access: "+getd("#arena_unlimited_access_"+.@target_account);
 	mes "Cooldown Status: "+getd("#arena_cooldown_start_"+.@target_account);
-	mes "IP Cooldown Status: "+getd("#arena_ip_cooldown_"+.@target_account);
+	// Query IP cooldown status from database
+	query_sql "SELECT cooldown_end FROM monster_arena_ip WHERE account_id = "+.@target_account+" AND cooldown_end > NOW()";
+	if($@num_rows > 0){
+		mes "IP Cooldown Status: Active (Database)";
+	} else {
+		mes "IP Cooldown Status: None";
+	}
 	mes "Arena Points: "+getd("#arena_points_"+.@target_account);
 	mes " ";
 	
@@ -781,7 +802,7 @@ case 5:
 			setd "#arena_access_"+.@target_account, 0;
 			setd "#arena_unlimited_access_"+.@target_account, 0;
 			setd "#arena_cooldown_start_"+.@target_account, 0;
-			setd "#arena_ip_cooldown_"+.@target_account, 0;
+			query_sql "DELETE FROM monster_arena_ip WHERE account_id = "+.@target_account;
 			setd "#arena_last_reset_"+.@target_account, 0;
 
 			setd "#arena_timer_running_"+.@target_account, 0;
@@ -806,7 +827,7 @@ case 5:
 	case 7:
 		next;
 		setd "#arena_cooldown_start_"+.@target_account, 0;
-		setd "#arena_ip_cooldown_"+.@target_account, 0;
+		query_sql "DELETE FROM monster_arena_ip WHERE account_id = "+.@target_account;
 		setd "#arena_farming_time_"+.@target_account, 0;
 		mes "Cool Down Reset for timer, IP address, and farming time Successful for Account "+.@target_account;	
 		next;
@@ -1057,7 +1078,7 @@ bat_b02,0,0,0,0	script	arena_player_timer	-1,{
 				// Daily reset for player already inside arena
 				setd "#arena_farming_time_"+getcharid(3), 0;
 				setd "#arena_cooldown_start_"+getcharid(3), 0;
-				setd "#arena_ip_cooldown_"+getcharid(3), 0; // Reset IP cooldown on daily reset
+				query_sql "DELETE FROM monster_arena_ip WHERE account_id = "+getcharid(3); // Reset IP cooldown on daily reset
 				setd "#arena_last_reset_"+getcharid(3), .@current_day;
 				message strcharinfo(0), "^00FF00[Monster Arena] Daily reset applied! Farming time reset to 0.^000000";
 				message strcharinfo(0), "^00FF00[Monster Arena] You can now farm for "+.@farming_hours+" hours again.^000000";
@@ -1074,6 +1095,9 @@ bat_b02,0,0,0,0	script	arena_player_timer	-1,{
 					if(getd("#arena_cooldown_start_"+getcharid(3)) == 0){
 						setd "#arena_cooldown_start_"+getcharid(3), gettimetick(2);
 					}
+					
+					// Set IP cooldown in database to prevent multiple account abuse
+					query_sql "INSERT INTO monster_arena_ip (account_id, cooldown_start, cooldown_end) VALUES ("+getcharid(3)+", NOW(), DATE_ADD(NOW(), INTERVAL 12 HOUR)) ON DUPLICATE KEY UPDATE cooldown_end = DATE_ADD(NOW(), INTERVAL 12 HOUR)";
 					
 					// Kick player out of arena
 					message strcharinfo(0), "^FF0000[Monster Arena] You have reached your "+.@farming_hours+"-hour farming limit!^000000";
@@ -1200,7 +1224,7 @@ function	script	arena_grant_access	{
 		// New day, reset farming time and cooldown
 		setd "#arena_farming_time_"+.@account_id, 0;
 		setd "#arena_cooldown_start_"+.@account_id, 0; // Reset cooldown on daily reset
-		setd "#arena_ip_cooldown_"+.@account_id, 0; // Reset IP cooldown on daily reset
+		query_sql "DELETE FROM monster_arena_ip WHERE account_id = "+.@account_id; // Reset IP cooldown on daily reset
 		setd "#arena_last_reset_"+.@account_id, .@current_day;
 		//dispbottom "^FF0000[DEBUG] Daily reset applied for account: "+.@account_id+" Day: "+.@current_day+"^000000";
 	}
