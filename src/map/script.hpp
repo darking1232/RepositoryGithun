@@ -2345,4 +2345,12 @@ uint32 *script_array_cpy_list(struct script_array *sa);
 
 bool script_check_RegistryVariableLength(int32 pType, const char *val, size_t* vlen);
 
+// Custom player timer function declaration
+int script_addplayertimer(struct script_state* st, const char* funcname, int argc, struct script_data* data);
+
+// Persistent timer data management functions
+void pc_saveplayertimerdata(map_session_data *sd);
+void pc_loadplayertimerdata(map_session_data *sd);
+int32 pc_getplayertimerdata(map_session_data *sd, const char* event_name);
+
 #endif /* SCRIPT_HPP */

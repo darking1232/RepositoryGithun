@@ -11777,6 +11777,92 @@ BUILDIN_FUNC(addtimercount)
 }
 
 /*==========================================
+ * Custom addplayertimer function - Enhanced player timer with account support
+ *------------------------------------------*/
+BUILDIN_FUNC(addplayertimer)
+{
+	int32 tick;
+	const char* event;
+	TBL_PC* sd;
+	int32 account_id = 0;
+
+	// Ensure we have a valid player attached
+	if( !script_rid2sd(sd) ){
+		ShowError("buildin_addplayertimer: No player attached to script.\n");
+		return SCRIPT_CMD_FAILURE;
+	}
+
+	tick = script_getnum(st,2);
+	event = script_getstr(st, 3);
+
+	// Check if optional account_id parameter is provided
+	if( script_hasdata(st,4) )
+		account_id = script_getnum(st,4);
+	else
+		account_id = sd->status.account_id; // Use current player's account
+
+	check_event(st, event);
+
+	// Create a unique event name that includes account_id for proper tracking
+	char unique_event[256];
+	snprintf(unique_event, sizeof(unique_event), "%s_timer_%d", event, account_id);
+
+	// Ensure player is properly attached before adding timer
+	if (!pc_addeventtimer(sd,tick,unique_event)) {
+		ShowWarning("buildin_addplayertimer: Event timer is full, can't add new event timer. (cid:%d timer:%s account:%d)\n",sd->status.char_id,event,account_id);
+		return SCRIPT_CMD_FAILURE;
+	}
+
+	// Store account_id in player variables for later reference
+	char var_name[64];
+	snprintf(var_name, sizeof(var_name), "timer_account_%s", event);
+	setd_sub_num(st, sd, var_name, 0, account_id, nullptr);
+
+	// Save timer data for persistence
+	pc_saveplayertimerdata(sd);
+
+	ShowDebug("buildin_addplayertimer: Added timer for player %s (AID:%d) - Event: %s, Tick: %d\n", sd->status.name, account_id, unique_event, tick);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * Get player timer data for account-based timers
+ *------------------------------------------*/
+BUILDIN_FUNC(getplayertimer)
+{
+	const char* event;
+	TBL_PC* sd;
+
+	if( !script_rid2sd(sd) )
+		return SCRIPT_CMD_SUCCESS;
+
+	event = script_getstr(st, 2);
+
+	// Get the remaining time in milliseconds
+	int32 remaining_time = pc_getplayertimerdata(sd, event);
+	
+	script_pushint(st, remaining_time);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * Load persistent timer data for player
+ *------------------------------------------*/
+BUILDIN_FUNC(loadplayertimers)
+{
+	TBL_PC* sd;
+
+	if( !script_rid2sd(sd) )
+		return SCRIPT_CMD_SUCCESS;
+
+	// Load persistent timer data
+	pc_loadplayertimerdata(sd);
+	
+	script_pushint(st, 1);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
  *------------------------------------------*/
 BUILDIN_FUNC(initnpctimer)
 {
@@ -28048,6 +28134,9 @@ BUILDIN_DEF(plagiarism, "iii"),
 	BUILDIN_DEF(addtimer,"is"),
 	BUILDIN_DEF(deltimer,"s"),
 	BUILDIN_DEF(addtimercount,"is"),
+	BUILDIN_DEF(addplayertimer,"is?"),
+	BUILDIN_DEF(getplayertimer,"s"),
+	BUILDIN_DEF(loadplayertimers,""),
 	BUILDIN_DEF(initnpctimer,"??"),
 	BUILDIN_DEF(stopnpctimer,"??"),
 	BUILDIN_DEF(startnpctimer,"??"),

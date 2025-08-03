@@ -7467,6 +7467,188 @@ Example 1:
 
 	<NPC Header> {
 	// We need to use attachnpctimer because the mes command below needs RID attach
+
+---------------------------------------
+
+*addplayertimer <ticks>,"NPC::OnLabel"{, <account_id>};
+*getplayertimer "NPC::OnLabel";
+*loadplayertimers;
+
+These commands provide enhanced player-attached timer functionality with persistence
+capabilities. Unlike the standard 'addtimer' command, these functions are designed
+to properly attach to players/accounts and survive server restarts, crashes, and
+player logouts.
+
+'addplayertimer' creates a persistent timer that is specifically attached to a
+player or account. The timer data is automatically saved and restored, ensuring
+it continues even after server restarts or player disconnections.
+
+'getplayertimer' retrieves the remaining time (in milliseconds) for a specific
+player-attached timer.
+
+'loadplayertimers' manually triggers the loading of persistent timer data for
+the current player (usually called automatically on login).
+
+Key Features:
+- Account-based persistence: Timer data is saved using account-based variables
+- Server restart survival: Timers continue after server restarts/crashes
+- Player logout survival: Timers persist through player disconnections
+- Unique event tracking: Each timer gets a unique identifier per account
+- Automatic save/load: Timer data is automatically managed
+
+Parameters:
+- <ticks>: Time in milliseconds (1/1000th of a second)
+- "NPC::OnLabel": The event label to trigger when timer expires
+- <account_id>: (Optional) Specific account ID to attach timer to. If omitted,
+  uses the current player's account ID
+
+Returns:
+- addplayertimer: Returns 1 on success, 0 on failure
+- getplayertimer: Returns remaining time in milliseconds, 0 if timer not found
+- loadplayertimers: Returns 1 on success
+
+Important Notes:
+- These functions require a player context (must be called from a player-attached script)
+- Timer data is automatically saved on player logout/map change
+- Timer data is automatically loaded on player login
+- Each timer gets a unique identifier: "NPC::OnLabel_timer_<account_id>"
+- Maximum of MAX_EVENTTIMER (usually 5) timers per player
+- Timer events are triggered in the same NPC that created them
+
+Example 1 - Basic Usage:
+	<NPC Header> {
+		mes "[Timer NPC]";
+		mes "Starting a 30-second persistent timer...";
+		addplayertimer 30000, "Timer NPC::OnTimerComplete";
+		mes "Timer started! It will survive server restarts.";
+		close;
+	OnTimerComplete:
+		mes "[Timer NPC]";
+		mes "Timer completed for account: " + getcharid(3);
+		mes "This timer survived server restarts!";
+		close;
+	}
+
+Example 2 - Checking Timer Status:
+	<NPC Header> {
+		mes "[Timer Check]";
+		set .@remaining, getplayertimer("Timer NPC::OnTimerComplete");
+		if(.@remaining > 0) {
+			mes "Timer is active!";
+			mes "Remaining time: " + (.@remaining/1000) + " seconds";
+		} else {
+			mes "No active timer found.";
+		}
+		close;
+	}
+
+Example 3 - Account-Specific Timer:
+	<NPC Header> {
+		mes "[Account Timer]";
+		// Start timer for a specific account (e.g., 2000000)
+		addplayertimer 60000, "Account Timer::OnSpecialEvent", 2000000;
+		mes "Started special timer for account 2000000";
+		close;
+	OnSpecialEvent:
+		mes "[Account Timer]";
+		mes "Special event triggered for account: " + getcharid(3);
+		close;
+	}
+
+Example 4 - Manual Timer Loading:
+	<NPC Header> {
+		mes "[Manual Load]";
+		// Manually load persistent timer data
+		loadplayertimers;
+		mes "Timer data loaded from persistent storage.";
+		close;
+	}
+
+Debugging Tips:
+- Use dispbottom to show debug messages during timer events
+- Check timer status with getplayertimer before starting new timers
+- Monitor account-based variables for timer data persistence
+- Use the Timer Test NPC (in monster_arena.txt) for testing functionality
+
+Implementation Details:
+- Timer data is stored in account-based variables: #persistent_timer_<event>_<account_id>
+- Event names are automatically converted to unique format: "NPC::OnLabel_timer_<account_id>"
+- Save/load functions are integrated into login/logout events in the source code
+- Error checking ensures player context is always available
+
+C++ Source Implementation:
+The custom addplayertimer functions are implemented in the following source files:
+
+1. src/map/script.hpp:
+   - script_addplayertimer(): Main function declaration
+   - pc_saveplayertimerdata(): Save timer data to persistent storage
+   - pc_loadplayertimerdata(): Load timer data from persistent storage
+   - pc_getplayertimerdata(): Retrieve timer data for specific events
+
+2. src/map/script.cpp:
+   - BUILDIN_FUNC(addplayertimer): Creates persistent player-attached timers
+   - BUILDIN_FUNC(getplayertimer): Retrieves remaining time for timers
+   - BUILDIN_FUNC(loadplayertimers): Manually loads persistent timer data
+   - Function registration in buildin_func_list
+
+3. src/map/pc.cpp:
+   - pc_saveplayertimerdata(): Saves active timers to account variables
+   - pc_loadplayertimerdata(): Restores timers from account variables
+   - Integration with pc_setpos() for logout/map change events
+   - Modified pc_getplayertimerdata() for unique event name format
+
+4. src/map/clif.cpp:
+   - Integration with NPCE_LOGIN event for automatic timer loading
+
+Troubleshooting Common Issues:
+
+1. "No player attached to script" Error:
+   - Ensure the script is called from a player context (not a global script)
+   - Use player-attached NPCs or events that have RID attached
+   - Check if the script is being called from OnInit or other global events
+
+2. Timer Not Persisting After Server Restart:
+   - Verify account-based variables are being saved correctly
+   - Check if pc_saveplayertimerdata() is being called on logout
+   - Ensure pc_loadplayertimerdata() is called on login
+   - Monitor account variables: #persistent_timer_<event>_<account_id>
+
+3. Timer Not Triggering Events:
+   - Verify the event label exists in the same NPC
+   - Check that the timer is actually created (use getplayertimer)
+   - Ensure the NPC script is loaded and accessible
+   - Debug with dispbottom messages in timer events
+
+4. Multiple Timers Not Working:
+   - Check MAX_EVENTTIMER limit (usually 5 timers per player)
+   - Use unique event names for different timers
+   - Clear old timers with deltimer before creating new ones
+
+5. Account-Specific Timer Issues:
+   - Verify the account_id parameter is correct
+   - Check that the target account has proper permissions
+   - Ensure the timer is created for the intended account
+
+Debug Commands:
+- Use the Timer Test NPC (located at prontera,160,145) for testing
+- Check timer status: getplayertimer("NPC::OnLabel")
+- Monitor account variables: getd("#persistent_timer_<event>_<account_id>")
+- Use dispbottom for real-time debugging messages
+
+Performance Considerations:
+- Timer data is saved on every logout/map change
+- Loading occurs on every login
+- Account variables are used for persistence (limited storage)
+- Maximum 5 timers per player (MAX_EVENTTIMER limit)
+
+Future Enhancements:
+- Support for timer priorities
+- Batch timer operations
+- Timer event queuing
+- Enhanced error reporting
+- Timer statistics and monitoring
+
+---------------------------------------
 		attachnpctimer;
 		initnpctimer;
 		npctalk "I cant talk right now, give me 10 seconds";
@@ -8381,7 +8563,7 @@ placement of the illustration and takes following values:
 	4	middle of screen without the window header, but still movable
 	255	clear all displayed cutins
 
-The picture is read from data\texture\유저인터페이스\illust, from both the GRF archive
+The picture is read from data\texture\???????\illust, from both the GRF archive
 and data folder, and is required to be a bitmap. The file extension .bmp can be
 omitted. Magenta color (#ff00ff) is considered transparent. There is no limit
 placed on the size of the illustrations by the client, although loading of large
@@ -8571,7 +8753,7 @@ The values given will be divided by 100 and transmitted as floating-point number
 
 	rotation	The rotation of the camera.
 				Default: 0 (0.0) when no rotation is applied
-				Maximum: 360000 (360.0°) when fully rotated
+				Maximum: 360000 (360.0�) when fully rotated
 
 	latitude	The angle of the camera.
 				Default: -50000 (-50.0)

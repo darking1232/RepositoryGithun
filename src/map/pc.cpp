@@ -7047,6 +7047,9 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 		if (sd->state.buyingstore) // Stop buyingstore
 			buyingstore_close(sd);
 
+		// Save persistent timer data for custom addplayertimer
+		pc_saveplayertimerdata(sd);
+		
 		npc_script_event( *sd, NPCE_LOGOUT );
 
 		//remove from map, THEN change x/y coordinates
@@ -11767,6 +11770,111 @@ void pc_cleareventtimer(map_session_data *sd)
 			if(sd->eventcount > 0) //avoid looping to max val
 				sd->eventcount--;
 			if (p) aFree(p);
+		}
+	}
+}
+
+/*==========================================
+ * Get account-based timer data for a specific event
+ *------------------------------------------*/
+int32 pc_getplayertimerdata(map_session_data *sd, const char* event_name)
+{
+	int32 i;
+	char unique_event[256];
+	int32 account_id = sd->status.account_id;
+
+	nullpo_retr(0,sd);
+
+	// Create the unique event name that matches what addplayertimer creates
+	snprintf(unique_event, sizeof(unique_event), "%s_%s_%d", event_name, "timer", account_id);
+
+	// Find the timer with this unique event name
+	for(i=0;i<MAX_EVENTTIMER;i++){
+		if( sd->eventtimer[i] != INVALID_TIMER ){
+			char *p = (char *)(get_timer(sd->eventtimer[i])->data);
+			if( p && strcmp(p, unique_event) == 0 ){
+				// Return the remaining time in milliseconds
+				return get_timer(sd->eventtimer[i])->tick - gettick();
+			}
+		}
+	}
+	return 0; // Timer not found or expired
+}
+
+/*==========================================
+ * Save persistent timer data for player
+ *------------------------------------------*/
+void pc_saveplayertimerdata(map_session_data *sd)
+{
+	int32 i;
+	char var_name[64];
+	int32 account_id = sd->status.account_id;
+
+	nullpo_retv(sd);
+
+	// Save all active timers for this player
+	for(i=0;i<MAX_EVENTTIMER;i++){
+		if( sd->eventtimer[i] != INVALID_TIMER ){
+			char *p = (char *)(get_timer(sd->eventtimer[i])->data);
+			if( p && strstr(p, "_timer_") ){
+				// Extract event name from timer data
+				char event_name[128];
+				char *underscore = strrchr(p, '_');
+				if( underscore ){
+					strncpy(event_name, p, underscore - p);
+					event_name[underscore - p] = '\0';
+					
+					// Save timer data to persistent storage
+					snprintf(var_name, sizeof(var_name), "#persistent_timer_%s_%d", event_name, account_id);
+					setd_sub_num(nullptr, sd, var_name, 0, get_timer(sd->eventtimer[i])->tick, nullptr);
+					
+					// Save timer event name
+					snprintf(var_name, sizeof(var_name), "#persistent_timer_event_%s_%d", event_name, account_id);
+					setd_sub_str(nullptr, sd, var_name, 0, p, nullptr);
+				}
+			}
+		}
+	}
+}
+
+/*==========================================
+ * Load persistent timer data for player
+ *------------------------------------------*/
+void pc_loadplayertimerdata(map_session_data *sd)
+{
+	int32 i;
+	char var_name[64];
+	int32 account_id = sd->status.account_id;
+	t_tick current_tick = gettick();
+
+	nullpo_retv(sd);
+
+	// Load all saved timers for this player
+	for(i=0;i<MAX_EVENTTIMER;i++){
+		if( sd->eventtimer[i] == INVALID_TIMER ){
+			// Check for saved timer data
+			snprintf(var_name, sizeof(var_name), "#persistent_timer_%d_%d", i, account_id);
+			int64 saved_tick = pc_readreg2(sd, var_name);
+			
+			if( saved_tick > current_tick ){
+				// Get saved event name
+				snprintf(var_name, sizeof(var_name), "#persistent_timer_event_%d_%d", i, account_id);
+				char* saved_event = pc_readregstr(sd, add_str(var_name));
+				
+				if( saved_event && strlen(saved_event) > 0 ){
+					// Restore the timer
+					int32 remaining_time = saved_tick - current_tick;
+					if( remaining_time > 0 ){
+						sd->eventtimer[i] = add_timer(current_tick + remaining_time, pc_eventtimer, sd->id, (intptr_t)aStrdup(saved_event));
+						sd->eventcount++;
+						
+						// Clear saved data
+						setd_sub_num(nullptr, sd, var_name, 0, 0, nullptr);
+						snprintf(var_name, sizeof(var_name), "#persistent_timer_event_%d_%d", i, account_id);
+						setd_sub_str(nullptr, sd, var_name, 0, "", nullptr);
+					}
+				}
+			}
 		}
 	}
 }

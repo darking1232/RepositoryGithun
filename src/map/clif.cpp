@@ -10899,6 +10899,9 @@ void clif_parse_LoadEndAck(int32 fd,map_session_data *sd)
 
 		if (!sd->state.autotrade) { // Don't trigger NPC event or opening vending/buyingstore will be failed
 			npc_script_event( *sd, NPCE_LOGIN );
+			
+			// Load persistent timer data for custom addplayertimer
+			pc_loadplayertimerdata(sd);
 		}
 
 		// Set facing direction before check below to update client

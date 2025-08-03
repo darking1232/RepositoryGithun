@@ -594,6 +594,19 @@ function	script	F_InsertComma	{
 	return .@str$;
 }
 
+//////////////////////////////////////////////////////////////////////////////////
+// Returns a number with commas between every three digits (Alternative version).
+// -- callfunc "F_InsertComma1",<number>
+// Examples:
+//    callfunc("F_InsertComma1",7777777)  // returns "7,777,777"
+//////////////////////////////////////////////////////////////////////////////////
+function	script	F_InsertComma1	{
+	set .@str$, getarg(0);
+	for (set .@i,getstrlen(.@str$)-3; .@i>0; set .@i,.@i-3)
+		set .@str$, insertchar(.@str$,",",.@i);
+	return .@str$;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////
 // Returns a number with a '-st', '-nd', '-rd', or '-th' suffix.

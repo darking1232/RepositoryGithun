@@ -582,6 +582,15 @@ static void warp_get_suggestions(map_session_data* sd, const char *name) {
 	clif_displaymessage(sd->fd, buffer);
 }
 /*==========================================
+ * check monsterarenatimer by glemor
+ *------------------------------------------*/
+ACMD_FUNC(monsterarenatimer)
+{
+    clif_displaymessage(fd, "This command is handled by an NPC script.");
+    return 0;
+}
+
+/*==========================================
  * check vip buff by glemor
  *------------------------------------------*/
 ACMD_FUNC(vipbuff)
@@ -10376,6 +10385,7 @@ const struct {
 	{"macrochecker", "Checks macro behavior for abuse detection"},
 	{"vipstatus", "Check your VIP subscription status"},
 	{"vipbuff", "Set VIP Buffs"},
+	{"monsterarenatimer", "Check Arena Timer [ works inside the Monster Arena Only] "},
 	{NULL, NULL}
 };
 
@@ -11845,6 +11855,7 @@ void atcommand_basecommands(void) {
 	 **/
 	AtCommandInfo atcommand_base[] = {
 #include <custom/atcommand_def.inc>
+		ACMD_DEF(monsterarenatimer),
 		ACMD_DEF(vipbuff),
 		ACMD_DEF(vipstatus),
 		ACMD_DEF(buildmanager),

@@ -1,4 +1,6 @@
 prontera,163,145,4	script	Monster Arena	450,{
+// Function to check and report farming time violations
+
 //cutin "arena_01",2;
 strt:
 mes "[^880000Arena Master^000000]";
@@ -7,7 +9,7 @@ mes "How may i help you?";
 mes " ";
 mes " ";
 mes " ";
-switch(select("^000088Enter Arena^000000:How many is my Arena Points:Information")){
+	switch(select("^000088Enter Arena^000000:How many is my Arena Points:Exchange Points for Items:Information:Timer Management")){
 //==========================arena room=======================
 case 1:
 	next;
@@ -20,20 +22,56 @@ case 1:
 	mes "^FF8800One-day Unlimited Access^000000 - 150,000,000 Zeny";
 	mes "Allows unlimited entry for 24 hours upon registration.";
 	mes " ";
-	mes "^FF8800Note:^000000 You can farm for 4 hours every 24 hours.";
-	mes "Time only moves while inside the arena.";
-	mes "After 4 hours, there's a 12-hour cooldown.";
-	mes "Access is restricted per IP address.";
+	// Check VIP status for information display
+	if(getgroupid() == 5){
+		mes "^FF8800Note:^000000 You can farm for 6 hours every 24 hours (VIP).";
+		mes "Time only moves while inside the arena.";
+		mes "After 6 hours, there's a 12-hour cooldown.";
+		mes "Access is restricted per IP address.";
+		mes " ";
+		mes "^FF0000Important:^000000 The 6-hour limit is per 24-hour period,";
+		mes "not per entry. Once you use 6 hours, you must wait 12 hours.";
+	} else {
+		mes "^FF8800Note:^000000 You can farm for 4 hours every 24 hours.";
+		mes "Time only moves while inside the arena.";
+		mes "After 4 hours, there's a 12-hour cooldown.";
+		mes "Access is restricted per IP address.";
+		mes " ";
+		mes "^FF0000Important:^000000 The 4-hour limit is per 24-hour period,";
+		mes "not per entry. Once you use 4 hours, you must wait 12 hours.";
+	}
 	
 	switch(select("One-time Entry:One-day Unlimited Access:Cancel")){
 	case 1:
 		// One-time entry
 		next;
+		
+		// Check VIP status and set farming time limit
+		if(getgroupid() == 5){ // VIP players (GM level 5)
+			set .@farming_limit, 21600; // 6 hours = 21600 seconds for VIP
+			set .@farming_hours, 6;
+		} else {
+			set .@farming_limit, 14400; // 4 hours = 14400 seconds for normal players
+			set .@farming_hours, 4;
+		}
+		
 		mes "[^880000Arena Master^000000]";
+		if(getgroupid() == 5){
+			mes "^FF8800[VIP STATUS]^000000 You have VIP privileges!";
+			mes "You can farm for 6 hours instead of 4 hours.";
+		}
 		mes "One-time entry costs 30,000,000 Zeny.";
 		mes "Do you have enough zeny?";
 		if(select("Yes","No")==2){ goto L_Later; }
 		next;
+
+		// Check if player has active unlimited access
+		if( getd("#arena_unlimited_access_"+getcharid(3)) > gettimetick(2) ){
+			// Automatically use unlimited access if available
+			mes "[^880000Arena Master^000000]";
+			mes "Unlimited Access Still Active, Click next to proceed";
+			goto unlimited_access_check;
+		}
 		
 		if ( Zeny < 30000000 ) {
 			mes "[^880000Arena Master^000000]";
@@ -42,9 +80,9 @@ case 1:
 			close;
 		}
 		
-		// Check IP restrictions
-		if( #arenaIPCooldown > gettimetick(2) ){
-			set .last,#arenaIPCooldown - gettimetick(2);
+		// Check IP restrictions using account-based system
+		if( getd("#arena_ip_cooldown_"+getcharid(3)) > gettimetick(2) ){
+			set .last, getd("#arena_ip_cooldown_"+getcharid(3)) - gettimetick(2);
 			set .@hours, .last / 3600;
 			set .@minutes, (.last % 3600) / 60;
 			next;
@@ -53,41 +91,95 @@ case 1:
 			mes "Wait ^FF0000"+.@hours+" hours and "+.@minutes+" minutes^000000 before entering again.";
 			close;
 		}
-		
-		// Check if player has active unlimited access
-		if( #arenaUnlimitedAccess > gettimetick(2) ){
-			next;
-			mes "[^880000Arena Master^000000]";
-			mes "You have active unlimited access until:";
-			mes "^008800"+atcommand("@time "+#arenaUnlimitedAccess)+"^000000";
-			mes " ";
-			mes "Do you want to use your unlimited access instead?";
-			if(select("Yes","No")==1){
-				goto unlimited_access_check;
+				
+		// Check farming time limit using account-based system
+		if( getd("#arena_farming_time_"+getcharid(3)) >= 14400 ){ // 4 hours = 14400 seconds
+			// Set cooldown start time if not already set
+			if( getd("#arena_cooldown_start_"+getcharid(3)) == 0 ){
+				setd "#arena_cooldown_start_"+getcharid(3), gettimetick(2);
 			}
-		}
-		
-		// Check farming time limit
-		if( #arenaFarmingTime >= 14400 ){ // 4 hours = 14400 seconds
+			// Set IP cooldown to prevent multiple account abuse
+			setd "#arena_ip_cooldown_"+getcharid(3), gettimetick(2) + (12 * 3600); // 12 hours
 			next;
 			mes "[^880000Arena Master^000000]";
-			mes "You have reached your 4-hour farming limit.";
+			mes "You have reached your 4-hour[6 Hours for VIP] farming limit.";
 			mes "You must wait 12 hours before farming again.";
 			close;
+		}
+		
+		// Check 12-hour cooldown period
+		if( getd("#arena_cooldown_start_"+getcharid(3)) > 0 ){
+			.@cooldown_remaining = getd("#arena_cooldown_start_"+getcharid(3)) + 43200 - gettimetick(2); // 12 hours = 43200 seconds
+			if( .@cooldown_remaining > 0 ){
+				next;
+				mes "[^880000Arena Master^000000]";
+				mes "You are still in the 12-hour cooldown period.";
+				mes "Wait ^FF0000"+callfunc("t",.@cooldown_remaining)+"^000000 before farming again.";
+				close;
+			} else {
+				// Cooldown expired, reset it
+				setd "#arena_cooldown_start_"+getcharid(3), 0;
+				setd "#arena_ip_cooldown_"+getcharid(3), 0;
+				setd "#arena_farming_time_"+getcharid(3), 0;
+			}
 		}
 		
 		// Proceed with one-time entry
 		announce "[Monster Arena] "+strcharinfo(0)+" Has Entered Monster Arena (One-time Entry).",0,0xFF6600;
 		set Zeny, Zeny - 30000000;
 		set #allowarenaroom, 1;
-		set #arenaEntryType, 1; // 1 = one-time entry
+		setd "#arena_entry_type_"+getcharid(3), 1; // 1 = one-time entry
 		warp "bat_b02" ,0,0;
+		// Display current farming time if any
+		if( getd("#arena_farming_time_"+getcharid(3)) > 0 ){
+			set .@hours, getd("#arena_farming_time_"+getcharid(3)) / 3600;
+			set .@minutes, (getd("#arena_farming_time_"+getcharid(3)) % 3600) / 60;
+			//message strcharinfo(0), "^00FF00[Resuming farming time: "+.@hours+":"+.@minutes+"]^000000";
+		}
+		// Grant arena access using the reliable system
+		callfunc "arena_grant_access", getcharid(3), strcharinfo(0), #arenaEntryType;
+		
+		// Auto-start timer system (same as @testtimer functionality)
+		// This ensures the timer starts automatically when entering arena
+		setd "#arena_access_"+getcharid(3), 1;
+		addtimer 1000, "arena_player_timer::OnPlayerTimerTick";
+		setd "#arena_timer_running_"+getcharid(3), 1;
+		//message strcharinfo(0), "^FF8800[Timer System] Auto-started individual timer^000000";
 		end;
 		
 	case 2:
 		// One-day unlimited access
 		next;
+		
+		// Check VIP status and set farming time limit
+		if(getgroupid() == 5){ // VIP players (GM level 5)
+			set .@farming_limit, 21600; // 6 hours = 21600 seconds for VIP
+			set .@farming_hours, 6;
+		} else {
+			set .@farming_limit, 14400; // 4 hours = 14400 seconds for normal players
+			set .@farming_hours, 4;
+		}
+		
+		// Check if player already has active unlimited access
+		if( getd("#arena_unlimited_access_"+getcharid(3)) > gettimetick(2) ){
+			set .@unlimited_remaining, getd("#arena_unlimited_access_"+getcharid(3)) - gettimetick(2);
+			mes "[^880000Arena Master^000000]";
+			mes "You already have active unlimited access until:";
+			mes "^008800"+callfunc("t",.@unlimited_remaining)+"^000000";
+			mes " ";
+			mes "Do you want to use your existing unlimited access?";
+			if(select("Yes","No")==1){
+				goto unlimited_access_check;
+			} else {
+				close;
+			}
+		}
+		
 		mes "[^880000Arena Master^000000]";
+		if(getgroupid() == 5){
+			mes "^FF8800[VIP STATUS]^000000 You have VIP privileges!";
+			mes "You can farm for 6 hours instead of 4 hours.";
+		}
 		mes "One-day unlimited access costs 150,000,000 Zeny.";
 		mes "This allows unlimited entry for 24 hours.";
 		mes "Do you have enough zeny?";
@@ -101,9 +193,9 @@ case 1:
 			close;
 		}
 		
-		// Check IP restrictions
-		if( #arenaIPCooldown > gettimetick(2) ){
-			set .last,#arenaIPCooldown - gettimetick(2);
+		// Check IP restrictions using account-based system
+		if( getd("#arena_ip_cooldown_"+getcharid(3)) > gettimetick(2) ){
+			set .last, getd("#arena_ip_cooldown_"+getcharid(3)) - gettimetick(2);
 			set .@hours, .last / 3600;
 			set .@minutes, (.last % 3600) / 60;
 			next;
@@ -113,22 +205,60 @@ case 1:
 			close;
 		}
 		
-		// Check farming time limit
-		if( #arenaFarmingTime >= 14400 ){ // 4 hours = 14400 seconds
+		// Check farming time limit using account-based system
+		if( getd("#arena_farming_time_"+getcharid(3)) >= 14400 ){ // 4 hours = 14400 seconds
+			// Set cooldown start time if not already set
+			if( getd("#arena_cooldown_start_"+getcharid(3)) == 0 ){
+				setd "#arena_cooldown_start_"+getcharid(3), gettimetick(2);
+			}
+			// Set IP cooldown to prevent multiple account abuse
+			setd "#arena_ip_cooldown_"+getcharid(3), gettimetick(2) + (12 * 3600); // 12 hours
 			next;
 			mes "[^880000Arena Master^000000]";
-			mes "You have reached your 4-hour farming limit.";
+			mes "You have reached your 4-hour[6 Hours for VIP] farming limit.";
 			mes "You must wait 12 hours before farming again.";
 			close;
+		}
+		
+		// Check 12-hour cooldown period
+		if( getd("#arena_cooldown_start_"+getcharid(3)) > 0 ){
+			.@cooldown_remaining = getd("#arena_cooldown_start_"+getcharid(3)) + 43200 - gettimetick(2); // 12 hours = 43200 seconds
+			if( .@cooldown_remaining > 0 ){
+				next;
+				mes "[^880000Arena Master^000000]";
+				mes "You are still in the 12-hour cooldown period.";
+				mes "Wait ^FF0000"+callfunc("t",.@cooldown_remaining)+"^000000 before farming again.";
+				close;
+			} else {
+				// Cooldown expired, reset it
+				setd "#arena_cooldown_start_"+getcharid(3), 0;
+				setd "#arena_ip_cooldown_"+getcharid(3), 0;
+				setd "#arena_farming_time_"+getcharid(3), 0;
+			}
 		}
 		
 		// Proceed with unlimited access
 		announce "[Monster Arena] "+strcharinfo(0)+" Has Purchased Unlimited Arena Access.",0,0xFF6600;
 		set Zeny, Zeny - 150000000;
-		set #arenaUnlimitedAccess, gettimetick(2) + (24 * 3600); // 24 hours
+		setd "#arena_unlimited_access_"+getcharid(3), gettimetick(2) + (24 * 3600); // 24 hours
 		set #allowarenaroom, 1;
-		set #arenaEntryType, 2; // 2 = unlimited access
+		setd "#arena_entry_type_"+getcharid(3), 2; // 2 = unlimited access
 		warp "bat_b02" ,0,0;
+		// Display current farming time if any
+		if( getd("#arena_farming_time_"+getcharid(3)) > 0 ){
+			set .@hours, getd("#arena_farming_time_"+getcharid(3)) / 3600;
+			set .@minutes, (getd("#arena_farming_time_"+getcharid(3)) % 3600) / 60;
+			//message strcharinfo(0), "^00FF00[Resuming farming time: "+.@hours+":"+.@minutes+"]^000000";
+		}
+		// Grant arena access using the reliable system
+		callfunc "arena_grant_access", getcharid(3), strcharinfo(0), getd("#arena_entry_type_"+getcharid(3));
+		
+		// Auto-start timer system (same as @testtimer functionality)
+		// This ensures the timer starts automatically when entering arena
+		setd "#arena_access_"+getcharid(3), 1;
+		addtimer 1000, "arena_player_timer::OnPlayerTimerTick";
+		setd "#arena_timer_running_"+getcharid(3), 1;
+		//message strcharinfo(0), "^FF8800[Timer System] Auto-started individual timer^000000";
 		end;
 		
 	case 3:
@@ -137,8 +267,33 @@ case 1:
 break;
 
 unlimited_access_check:
-	// Check farming time limit
-	if( #arenaFarmingTime >= 14400 ){ // 4 hours = 14400 seconds
+	// Check VIP status and set farming time limit
+	if(getgroupid() == 5){ // VIP players (GM level 5)
+		set .@farming_limit, 21600; // 6 hours = 21600 seconds for VIP
+		set .@farming_hours, 6;
+	} else {
+		set .@farming_limit, 14400; // 4 hours = 14400 seconds for normal players
+		set .@farming_hours, 4;
+	}
+	
+	// Verify unlimited access is still valid
+	if( getd("#arena_unlimited_access_"+getcharid(3)) <= gettimetick(2) ){
+		// Reset arena entry type since unlimited access has expired
+		setd "#arena_entry_type_"+getcharid(3), 0; // Only reset when access actually expires
+		mes "[^880000Arena Master^000000]";
+		mes "Your unlimited access has expired.";
+		close;
+	}
+	
+	// Inform player they're using unlimited access
+	next;
+	
+	// Check farming time limit using account-based system
+	if( getd("#arena_farming_time_"+getcharid(3)) >= 14400 ){ // 4 hours = 14400 seconds
+		// Set cooldown start time if not already set
+		if( getd("#arena_cooldown_start_"+getcharid(3)) == 0 ){
+			setd "#arena_cooldown_start_"+getcharid(3), gettimetick(2);
+		}
 		next;
 		mes "[^880000Arena Master^000000]";
 		mes "You have reached your 4-hour farming limit.";
@@ -146,28 +301,77 @@ unlimited_access_check:
 		close;
 	}
 	
+	// Check 12-hour cooldown period
+	if( getd("#arena_cooldown_start_"+getcharid(3)) > 0 ){
+		.@cooldown_remaining = getd("#arena_cooldown_start_"+getcharid(3)) + 43200 - gettimetick(2); // 12 hours = 43200 seconds
+		if( .@cooldown_remaining > 0 ){
+			next;
+			mes "[^880000Arena Master^000000]";
+			mes "You are still in the 12-hour cooldown period.";
+			mes "Wait ^FF0000"+callfunc("t",.@cooldown_remaining)+"^000000 before farming again.";
+			close;
+		} else {
+			// Cooldown expired, reset it
+				setd "#arena_cooldown_start_"+getcharid(3), 0;
+				setd "#arena_ip_cooldown_"+getcharid(3), 0;
+				setd "#arena_farming_time_"+getcharid(3), 0;
+		}
+	}
+	
 	// Proceed with unlimited access
 	announce "[Monster Arena] "+strcharinfo(0)+" Has Entered Monster Arena (Unlimited Access).",0,0xFF6600;
 	set #allowarenaroom, 1;
-	set #arenaEntryType, 2; // 2 = unlimited access
+	setd "#arena_entry_type_"+getcharid(3), 2; // 2 = unlimited access
 	warp "bat_b02" ,0,0;
+	// Display current farming time if any
+	if( getd("#arena_farming_time_"+getcharid(3)) > 0 ){
+		set .@hours, getd("#arena_farming_time_"+getcharid(3)) / 3600;
+		set .@minutes, (getd("#arena_farming_time_"+getcharid(3)) % 3600) / 60;
+		//message strcharinfo(0), "^00FF00[Resuming farming time: "+.@hours+":"+.@minutes+"]^000000";
+	}
+	// Grant arena access using the reliable system
+	callfunc "arena_grant_access", getcharid(3), strcharinfo(0), getd("#arena_entry_type_"+getcharid(3));
+	
+	// Auto-start timer system (same as @testtimer functionality)
+	// This ensures the timer starts automatically when entering arena
+	setd "#arena_access_"+getcharid(3), 1;
+	addtimer 1000, "arena_player_timer::OnPlayerTimerTick";
+	setd "#arena_timer_running_"+getcharid(3), 1;
+	//message strcharinfo(0), "^FF8800[Timer System] Auto-started individual timer^000000";
 	end;
-
-L_Later:
+	
+	L_Later:
 mes "[^880000Arena Master^000000]";
 mes "Don't waste my time!..";
 close;
 
+
+
 case 2:
 	next;
 	mes "[^880000Arena Master^000000]";
-	mes "You current Arena Points is "+#arenapoints;
+	mes "You current Arena Points is "+getd("#arena_points_"+getcharid(3));
 	next;
 	goto strt;
 break;
 
-//==========================================information==============================================
+//==========================================item exchange==============================================
 case 3:
+	next;
+	mes "[^880000Arena Master^000000]";
+	mes "Welcome to the Arena Item Shop!";
+	mes "Here you can purchase items using your Arena Points.";
+	mes " ";
+	mes "Your current Arena Points: ^008800"+getd("#arena_points_"+getcharid(3))+"^000000";
+	mes " ";
+	mes "Opening Arena Points Shop...";
+	close2;
+	callshop "arena_points_shop",1;
+	end;
+break;
+
+//==========================================information==============================================
+case 4:
 next;
 mes "[^880000Arena Master^000000]";
 mes "Monsters Inside The Room:";
@@ -196,155 +400,988 @@ mes "  • Unlimited entry for 24 hours";
 next;
 mes "[^0055FF ::: Arena Master ::: ^000000]";
 mes "Farming Limits:";
-mes "• Maximum 4 hours of farming per 24 hours";
-mes "• Time only counts while inside the arena";
-mes "• 12-hour cooldown after 4 hours";
-mes "• IP-based restrictions apply";
+// Check VIP status for information display
+if(getgroupid() == 5){
+	mes "• Maximum 6 hours of farming per 24 hours (VIP)";
+	mes "• Time only counts while inside the arena";
+	mes "• 12-hour cooldown after 6 hours";
+	mes "• IP-based restrictions apply";
+	mes "• 6-hour limit is PER 24-HOUR PERIOD, not per entry";
+	mes "• Once you use 6 hours, you must wait 12 hours";
+	mes "• IP restriction prevents using other accounts";
+} else {
+	mes "• Maximum 4 hours of farming per 24 hours";
+	mes "• Time only counts while inside the arena";
+	mes "• 12-hour cooldown after 4 hours";
+	mes "• IP-based restrictions apply";
+	mes "• 4-hour limit is PER 24-HOUR PERIOD, not per entry";
+	mes "• Once you use 4 hours, you must wait 12 hours";
+	mes "• IP restriction prevents using other accounts";
+}
 next;
 mes "[^0055FF ::: Arena Master ::: ^000000]";
-mes "Your current farming time: ^FF8800"+(#arenaFarmingTime/3600)+" hours and "+((#arenaFarmingTime%3600)/60)+" minutes^000000";
-if( #arenaUnlimitedAccess > gettimetick(2) ){
-	mes "Unlimited access until: ^008800"+atcommand("@time "+#arenaUnlimitedAccess)+"^000000";
+mes "24-Hour System:";
+mes "• One-day unlimited access lasts exactly 24 hours";
+mes "• Starts from the moment you purchase it";
+mes "• Allows unlimited entry during those 24 hours";
+// Check VIP status for information display
+if(getgroupid() == 5){
+	mes "• Farming time still limited to 6 hours per 24-hour period (VIP)";
+	mes "• You can enter multiple times but total farming time is 6 hours";
+} else {
+	mes "• Farming time still limited to 4 hours per 24-hour period";
+	mes "• You can enter multiple times but total farming time is 4 hours";
+}
+next;
+mes "[^0055FF ::: Arena Master ::: ^000000]";
+		// Check VIP status and set farming time limit
+		if(getgroupid() == 5){ // VIP players (GM level 5)
+			set .@farming_limit, 21600; // 6 hours = 21600 seconds for VIP
+			set .@farming_hours, 6;
+		} else {
+			set .@farming_limit, 14400; // 4 hours = 14400 seconds for normal players
+			set .@farming_hours, 4;
+		}
+		
+		mes "Your current farming time: ^FF8800"+callfunc("t",getd("#arena_farming_time_"+getcharid(3)))+"^000000";
+		set .@remaining_farming, .@farming_limit - getd("#arena_farming_time_"+getcharid(3));
+		if( .@remaining_farming > 0 ){
+			mes "Remaining farming time: ^00FF00"+callfunc("t",.@remaining_farming)+"^000000";
+		}
+if( getd("#arena_unlimited_access_"+getcharid(3)) > gettimetick(2) ){
+	set .@unlimited_remaining, getd("#arena_unlimited_access_"+getcharid(3)) - gettimetick(2);
+	mes "Unlimited access remaining: ^008800"+callfunc("t",.@unlimited_remaining)+"^000000";
 }
 next;
 goto strt;
+
+
+
+case 5:
+	// Timer Management - GM Only (Account 99)
+	next;
+	
+	// Check if player is GM account 99
+	if(getgroupid() != 99){
+		mes "[^880000Arena Master^000000]";
+		mes "^FF0000Access Denied!^000000";
+		mes "Only GM Account 99 can access Timer Management.";
+		mes " ";
+		mes "Your Account ID: "+getcharid(3);
+		mes "Your GM Level: "+getgroupid();
+		close;
+	}
+	
+	mes "[^880000Arena Master^000000]";
+	mes "Timer Management (GM Account 99 Only)";
+	mes " ";
+	mes "Your Account ID: "+getcharid(3);
+	mes " ";
+	mes "Enter the Account ID to manage:";
+	input .@target_account;
+	
+	if(.@target_account <= 0){
+		mes "Invalid Account ID. Please enter a valid account number.";
+		close;
+	}
+	
+	mes " ";
+	// Check VIP status for target account (assuming GM can see VIP status)
+	mes "Target Account ID: "+.@target_account;
+	mes "Current farming time: "+callfunc("t",getd("#arena_farming_time_"+.@target_account));
+	// Note: GM management shows standard 4-hour limit for reference
+	mes "Remaining time (4-hour limit): "+callfunc("t",14400-getd("#arena_farming_time_"+.@target_account));
+	mes "Arena Access: "+getd("#arena_access_"+.@target_account);
+	mes "Unlimited Access: "+getd("#arena_unlimited_access_"+.@target_account);
+	mes "Cooldown Status: "+getd("#arena_cooldown_start_"+.@target_account);
+	mes "IP Cooldown Status: "+getd("#arena_ip_cooldown_"+.@target_account);
+	mes "Arena Points: "+getd("#arena_points_"+.@target_account);
+	mes " ";
+	
+	switch(select("Reset Timer:Remove Time:Add Time:Set Specific Time:Pause/Resume Timer:Full Reset:Cool Down Reset:Unlimited Access Reset:View Violations:Cancel")){
+	case 1:
+		// Reset Timer
+		next;
+		mes "[^880000Arena Master^000000]";
+		mes "Reset Timer to 0";
+		mes " ";
+		mes "Target Account: "+.@target_account;
+		mes "Current farming time: "+callfunc("t",getd("#arena_farming_time_"+.@target_account));
+		mes "This will reset the farming time to 0 seconds.";
+		mes " ";
+		if(select("Confirm Reset:Cancel")==1){
+			setd "#arena_farming_time_"+.@target_account, 0;
+			mes "Timer reset successfully for Account "+.@target_account+"!";
+			mes "New farming time: 0 seconds";
+		}
+		next;
+		goto strt;
+		
+	case 2:
+		// Remove Time
+		next;
+		mes "[^880000Arena Master^000000]";
+		mes "Remove time to Timer";
+		mes " ";
+		mes "Target Account: "+.@target_account;
+		mes "Current farming time: "+callfunc("t",getd("#arena_farming_time_"+.@target_account));
+		mes " ";
+		mes "Note: Timer will be automatically paused during this operation.";
+		mes " ";
+		mes "Select time to add:";
+		// Automatically pause timer before operation
+		setd "#arena_timer_running_"+.@target_account, 0;
+		
+		switch(select("-1 Minute (-60s):-5 Minutes (-300s):-10 Minutes (-600s):-30 Minutes (-1800s):-1 Hour (-3600s):Custom Time")){
+		case 1:
+			setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) + 60;
+			mes "Removed 1 minute to timer for Account "+.@target_account+".";
+			break;
+		case 2:
+			setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) + 300;
+			mes "Removed 5 minutes to timer for Account "+.@target_account+".";
+			break;
+		case 3:
+			setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) + 600;
+			mes "Removed 10 minutes to timer for Account "+.@target_account+".";
+			break;
+		case 4:
+			setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) + 1800;
+			mes "Removed 30 minutes to timer for Account "+.@target_account+".";
+			break;
+		case 5:
+			setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) + 3600;
+			mes "Removed 1 hour to timer for Account "+.@target_account+".";
+			break;
+		case 6:
+			mes "Enter custom time in seconds:";
+			input .@custom_time;
+			if(.@custom_time > 0){
+				setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) + .@custom_time;
+				mes "Added "+.@custom_time+" seconds to timer for Account "+.@target_account+".";
+			} else {
+				mes "Invalid time value.";
+			}
+			break;
+		}
+		
+		// Automatically resume timer after operation
+		setd "#arena_timer_running_"+.@target_account, 1;
+		mes " ";
+		mes "New farming time: "+callfunc("t",getd("#arena_farming_time_"+.@target_account));
+		mes "Timer automatically resumed.";
+		next;
+		goto strt;
+		
+	case 3:
+		// Add Time
+		next;
+		mes "[^880000Arena Master^000000]";
+		mes "Add Time from Timer";
+		mes " ";
+		mes "Target Account: "+.@target_account;
+		mes "Current farming time: "+callfunc("t",getd("#arena_farming_time_"+.@target_account));
+		mes " ";
+		mes "Note: Timer will be automatically paused during this operation.";
+		mes " ";
+		mes "Select time to remove:";
+		// Automatically pause timer before operation
+		setd "#arena_timer_running_"+.@target_account, 0;
+		
+		switch(select("+1 Minute (+60s):+5 Minutes (+300s):+10 Minutes (+600s):+30 Minutes (+1800s):+1 Hour (+3600s):Custom Time")){
+		case 1:
+			if(getd("#arena_farming_time_"+.@target_account) >= 60){
+				setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) - 60;
+				mes "Add 1 minute from timer for Account "+.@target_account+".";
+			} else {
+				mes "Cannot remove more time than available.";
+			}
+			break;
+		case 2:
+			if(getd("#arena_farming_time_"+.@target_account) >= 300){
+				setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) - 300;
+				mes "Add 5 minutes from timer for Account "+.@target_account+".";
+			} else {
+				mes "Cannot remove more time than available.";
+			}
+			break;
+		case 3:
+			if(getd("#arena_farming_time_"+.@target_account) >= 600){
+				setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) - 600;
+				mes "Add 10 minutes from timer for Account "+.@target_account+".";
+			} else {
+				mes "Cannot remove more time than available.";
+			}
+			break;
+		case 4:
+			if(getd("#arena_farming_time_"+.@target_account) >= 1800){
+				setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) - 1800;
+				mes "Removed 30 minutes from timer for Account "+.@target_account+".";
+			} else {
+				mes "Cannot remove more time than available.";
+			}
+			break;
+		case 5:
+			if(getd("#arena_farming_time_"+.@target_account) >= 3600){
+				setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) - 3600;
+				mes "Removed 1 hour from timer for Account "+.@target_account+".";
+			} else {
+				mes "Cannot remove more time than available.";
+			}
+			break;
+		case 6:
+			mes "Enter custom time in seconds to remove:";
+			input .@custom_time;
+			if(.@custom_time > 0 && getd("#arena_farming_time_"+.@target_account) >= .@custom_time){
+				setd "#arena_farming_time_"+.@target_account, getd("#arena_farming_time_"+.@target_account) - .@custom_time;
+				mes "Removed "+.@custom_time+" seconds from timer for Account "+.@target_account+".";
+			} else {
+				mes "Invalid time value or not enough time to remove.";
+			}
+			break;
+		}
+		
+		// Automatically resume timer after operation
+		setd "#arena_timer_running_"+.@target_account, 1;
+		mes " ";
+		mes "New farming time: "+callfunc("t",getd("#arena_farming_time_"+.@target_account));
+		mes "Timer automatically resumed.";
+		next;
+		goto strt;
+		
+	case 4:
+		// Set Specific Time
+		next;
+		mes "[^880000Arena Master^000000]";
+		mes "Set Specific Timer Value";
+		mes " ";
+		mes "Target Account: "+.@target_account;
+		mes "Current farming time: "+callfunc("t",getd("#arena_farming_time_"+.@target_account));
+		mes " ";
+		mes "Note: Timer will be automatically paused during this operation.";
+		mes " ";
+		mes "Select preset time:";
+		// Automatically pause timer before operation
+		setd "#arena_timer_running_"+.@target_account, 0;
+		
+		switch(select("0 seconds (Reset):1 minute (60s):5 minutes (300s):10 minutes (600s):30 minutes (1800s):1 hour (3600s):2 hours (7200s):3 hours (10800s):4 hours (14400s):Custom Time")){
+		case 1:
+			setd "#arena_farming_time_"+.@target_account, 0;
+			mes "Timer set to 0 seconds for Account "+.@target_account+".";
+			break;
+		case 2:
+			setd "#arena_farming_time_"+.@target_account, 60;
+			mes "Timer set to 1 minute for Account "+.@target_account+".";
+			break;
+		case 3:
+			setd "#arena_farming_time_"+.@target_account, 300;
+			mes "Timer set to 5 minutes for Account "+.@target_account+".";
+			break;
+		case 4:
+			setd "#arena_farming_time_"+.@target_account, 600;
+			mes "Timer set to 10 minutes for Account "+.@target_account+".";
+			break;
+		case 5:
+			setd "#arena_farming_time_"+.@target_account, 1800;
+			mes "Timer set to 30 minutes for Account "+.@target_account+".";
+			break;
+		case 6:
+			setd "#arena_farming_time_"+.@target_account, 3600;
+			mes "Timer set to 1 hour for Account "+.@target_account+".";
+			break;
+		case 7:
+			setd "#arena_farming_time_"+.@target_account, 7200;
+			mes "Timer set to 2 hours for Account "+.@target_account+".";
+			break;
+		case 8:
+			setd "#arena_farming_time_"+.@target_account, 10800;
+			mes "Timer set to 3 hours for Account "+.@target_account+".";
+			break;
+		case 9:
+			setd "#arena_farming_time_"+.@target_account, 14400;
+			mes "Timer set to 4 hours (maximum) for Account "+.@target_account+".";
+			break;
+		case 10:
+			mes "Enter custom time in seconds:";
+			input .@custom_time;
+			if(.@custom_time >= 0 && .@custom_time <= 14400){
+				setd "#arena_farming_time_"+.@target_account, .@custom_time;
+				mes "Timer set to "+.@custom_time+" seconds for Account "+.@target_account+".";
+			} else {
+				mes "Invalid time value. Must be between 0 and 14400 seconds.";
+			}
+			break;
+		}
+		
+		// Automatically resume timer after operation
+		setd "#arena_timer_running_"+.@target_account, 1;
+		mes " ";
+		mes "New farming time: "+callfunc("t",getd("#arena_farming_time_"+.@target_account));
+		mes "Timer automatically resumed.";
+		next;
+		goto strt;
+		
+	case 5:
+		// Pause/Resume Timer
+		next;
+		mes "[^880000Arena Master^000000]";
+		mes "Pause/Resume Timer";
+		mes " ";
+		mes "Target Account: "+.@target_account;
+		mes "Current Timer Status: "+getd("#arena_timer_running_"+.@target_account);
+		mes "Current farming time: "+callfunc("t",getd("#arena_farming_time_"+.@target_account));
+		mes " ";
+		mes "Select action:";
+		switch(select("Pause Timer:Resume Timer:Check Status:Cancel")){
+		case 1:
+			// Pause Timer
+			setd "#arena_timer_running_"+.@target_account, 0;
+			mes "Timer paused for Account "+.@target_account+".";
+			mes "Farming time will no longer increment.";
+			break;
+		case 2:
+			// Resume Timer
+			setd "#arena_timer_running_"+.@target_account, 1;
+			mes "Timer resumed for Account "+.@target_account+".";
+			mes "Farming time will start incrementing again.";
+			break;
+		case 3:
+			// Check Status
+			mes "Timer Status for Account "+.@target_account+":";
+			mes "• Timer Running: "+getd("#arena_timer_running_"+.@target_account);
+			mes "• Farming Time: "+callfunc("t",getd("#arena_farming_time_"+.@target_account));
+			mes "• Arena Access: "+getd("#arena_access_"+.@target_account);
+			break;
+		case 4:
+			close;
+		}
+		next;
+		goto strt;
+		
+	case 6:
+		// Full Reset - Reset all timer-related data
+		next;
+		mes "[^880000Arena Master^000000]";
+		mes "Full Reset - All Timer Data";
+		mes " ";
+		mes "This will reset ALL timer-related data for Account "+.@target_account+":";
+		mes "• Farming time: "+callfunc("t",getd("#arena_farming_time_"+.@target_account));
+		mes "• Arena access: "+getd("#arena_access_"+.@target_account);
+		mes "• Unlimited access: "+getd("#arena_unlimited_access_"+.@target_account);
+		mes "• Cooldown status: "+getd("#arena_cooldown_start_"+.@target_account);
+		mes "• IP cooldown status: "+getd("#arena_ip_cooldown_"+.@target_account);
+		mes "• Last reset day: "+getd("#arena_last_reset_"+.@target_account);
+
+		mes " ";
+		mes "^FF0000WARNING: This will completely reset arena progress for Account "+.@target_account+"!^000000";
+		mes " ";
+		if(select("Confirm Full Reset:Cancel")==1){
+			// Reset all timer-related data
+			setd "#arena_farming_time_"+.@target_account, 0;
+			setd "#arena_access_"+.@target_account, 0;
+			setd "#arena_unlimited_access_"+.@target_account, 0;
+			setd "#arena_cooldown_start_"+.@target_account, 0;
+			setd "#arena_ip_cooldown_"+.@target_account, 0;
+			setd "#arena_last_reset_"+.@target_account, 0;
+
+			setd "#arena_timer_running_"+.@target_account, 0;
+			setd "#arena_cooldown_start_"+.@target_account, 0;
+			setd "#arena_unlimited_access_"+.@target_account, 0;
+			mes "^00FF00Full reset completed successfully for Account "+.@target_account+"!^000000";
+			mes " ";
+			mes "Reset data:";
+			mes "• Farming time: 0 seconds";
+			mes "• Arena access: 0 (disabled)";
+			mes "• Unlimited access: 0 (disabled)";
+			mes "• Cooldown status: 0 (disabled)";
+			mes "• IP cooldown status: 0 (disabled)";
+			mes "• Last reset day: 0";
+			//mes "• Arena points: 0";
+			mes " ";
+			mes "Account "+.@target_account+" will need to purchase arena access again.";
+		}
+		next;
+		goto strt;
+		
+	case 7:
+		next;
+		setd "#arena_cooldown_start_"+.@target_account, 0;
+		setd "#arena_ip_cooldown_"+.@target_account, 0;
+		setd "#arena_farming_time_"+.@target_account, 0;
+		mes "Cool Down Reset for timer, IP address, and farming time Successful for Account "+.@target_account;	
+		next;
+		goto strt;
+	case 8:
+		setd "#arena_unlimited_access_"+.@target_account, 0;
+		mes "Unlimited Access Reset"+.@target_account;	
+		next;
+		goto strt;
+
+	case 9:
+		// View Violations
+		next;
+		mes "[^880000Arena Master^000000]";
+		mes "Farming Time Violations Report";
+		mes " ";
+		mes "This shows accounts that exceeded their farming limits.";
+		mes " ";
+		
+		// Search for violations (check last 24 hours)
+		set .@violation_count, 0;
+		set .@current_time, gettimetick(2);
+		
+		// Note: This is a simplified check - in a real system you'd need a database
+		// For now, we'll show a message about the violation system
+		mes "^FF0000[VIOLATION SYSTEM ACTIVE]^000000";
+		mes "• Normal players: 4-hour limit";
+		mes "• VIP players: 6-hour limit";
+		mes "• Violations are automatically detected";
+		mes "• GMs are notified via announcements";
+		mes " ";
+		mes "^FF8800[Recent Violations]^000000";
+		mes "Check server logs for detailed violation reports.";
+		mes " ";
+		mes "Violation data is stored in account variables:";
+		mes "• #arena_violation_<account_id>";
+		mes "• #arena_violation_time_<account_id>";
+		mes "• #arena_violation_limit_<account_id>";
+		mes "• #arena_violation_char_<account_id>";
+		
+		next;
+		goto strt;
+		
+	case 10:
+		next;
+		goto strt;
+
+	}
 }
 
 // OnPCDieEvent - Handle death in arena
 OnPCDieEvent:
 	.@killerrid = killerrid;
 	if (strcharinfo(3) == "bat_b02" && .@killerrid != getcharid(3)) {
-		// Check if it was a one-time entry
-		if( #arenaEntryType == 1 ){
-			dispbottom "You died! Your one-time entry has expired.";
-			dispbottom "You must pay again to re-enter the arena.";
+		// Check if it was a one-time entry or if unlimited access has expired
+		if( getd("#arena_entry_type_"+getcharid(3)) == 1 || ( getd("#arena_entry_type_"+getcharid(3)) == 2 && getd("#arena_unlimited_access_"+getcharid(3)) <= gettimetick(2) ) ){
+			message strcharinfo(0), "You died! Your one-time entry has expired.";
+			message strcharinfo(0), "You must pay again to re-enter the arena.";
 		} else {
-			dispbottom "You died! Your unlimited access remains active.";
+			message strcharinfo(0), "You died! Your unlimited access remains active.";
 		}
 		set #allowarenaroom, 0;
+		// Remove arena access using account-based system
+		callfunc "arena_remove_access", getcharid(3);
 		warp "prontera",156,191;
+
 	}
 	end;
 
-// OnPCLogoutEvent - Handle logout in arena
+// OnPCLogoutEvent - Handle logout in arena (Account-based timer)
 OnPCLogoutEvent:
 	if (strcharinfo(3) == "bat_b02") {
 		set #allowarenaroom, 0;
+		// Note: #arena_farming_time_<account_id> is preserved for account-based timer
+		// Note: #arenaEntryType is preserved so unlimited access remains valid
 	}
 	end;
+
+
 }
 
-// Arena exit warp script
-//bat_b02,389,2,0	warp	retransfer	1,1,prontera,156,191
-//bat_b02,17,290,0	warp	retransfer1	1,1,prontera,156,191
-
-// Timer script to track farming time
--	script	arena_timer	-1,{
+//==========================================ARENA TIMER SYSTEM==============================================
+// Global timer script that manages arena players in bat_b02 - ACCOUNT BASED
+-	script	arena_timer_manager	-1,{
 	OnTimer1000:
-		if( strcharinfo(3) == "bat_b02" && #allowarenaroom == 1 ){
-			set #arenaFarmingTime, #arenaFarmingTime + 1;
+		// Account-based timer system for bat_b02 arena only
+		// Check if there are any players in the arena map
+		.@arena_players = getmapusers("bat_b02");
+		
+		if(.@arena_players > 0){
+			// Update active players count
+			set $arena_active_players, .@arena_players;
 			
-			// Check if 4 hours reached
-			if( #arenaFarmingTime >= 14400 ){
-				announce "[Monster Arena] "+strcharinfo(0)+" has reached the 4-hour farming limit and will be removed from arena.",0,0xFF0000;
-				set #arenaIPCooldown, gettimetick(2) + (12 * 3600); // 12-hour cooldown
-				set #arenaFarmingTime, 0;
-				set #allowarenaroom, 0;
-				warp "prontera",156,191;
-				dispbottom "You have reached your 4-hour farming limit. 12-hour cooldown activated.";
-			}
+			// Check for daily reset for all players in arena
+			.@current_day = gettime(4); // Current day of year
+			// Note: Individual player daily reset is handled in OnPlayerTimerTick
+			// This global timer ensures the system is active
+		} else {
+			// No players in arena, reset counter
+			set $arena_active_players, 0;
 		}
+		initnpctimer;
+		end;
+	
+	// Initialize timer when script loads
+	OnInit:
 		initnpctimer;
 		end;
 }
 
-// Monster kill scripts with updated point system
+
+
+
+
+// Global arena entry handler - More reliable than map-specific OnEnter
+-	script	arena_global_entry_handler	-1,{
+	OnInit:
+		end;
+		
+	OnPCLoginEvent:
+		// Check if player is in bat_b02 and has arena access
+		if(strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
+			callsub "StartArenaTimer";
+		}
+		end;
+		
+	OnPCMapChangeEvent:
+		// Check if player entered bat_b02
+		if(strcharinfo(3) == "bat_b02"){
+					// Check if unlimited access has expired and reset entry type if needed
+		if( getd("#arena_entry_type_"+getcharid(3)) == 2 && getd("#arena_unlimited_access_"+getcharid(3)) <= gettimetick(2) ){
+			setd "#arena_entry_type_"+getcharid(3), 0; // Only reset if unlimited access has actually expired
+		}
+			
+			// Check if player is in cooldown period
+			if(getd("#arena_cooldown_start_"+getcharid(3)) > 0){
+				.@cooldown_remaining = getd("#arena_cooldown_start_"+getcharid(3)) + 43200 - gettimetick(2);
+				if(.@cooldown_remaining > 0){
+					message strcharinfo(0), "^FF0000[Monster Arena] You are in cooldown period!^000000";
+					message strcharinfo(0), "^FF0000[Monster Arena] Wait "+callfunc("t",.@cooldown_remaining)+" before entering again.^000000";
+					warp "prontera",156,191;
+					end;
+				} else {
+					// Cooldown expired, reset it
+					setd "#arena_cooldown_start_"+getcharid(3), 0;
+				}
+			}
+			
+			// Check if player has arena access
+			if(getd("#arena_access_"+getcharid(3)) == 1){
+				callsub "StartArenaTimer";
+			} else {
+				// No arena access, kick out
+				message strcharinfo(0), "^FF0000[Monster Arena] You don't have arena access!^000000";
+				message strcharinfo(0), "^FF0000[Monster Arena] You are being kicked out.^000000";
+				warp "prontera",156,191;
+				end;
+			}
+		}
+		end;
+		
+	StartArenaTimer:
+		// Start the arena timer for this player
+		
+		// Check if timer is already running for this account
+		if(getd("#arena_timer_running_"+getcharid(3)) == 1){
+			return;
+		}
+		
+		// Display current farming time (preserve existing time)
+		set .@remaining_total, 14400 - getd("#arena_farming_time_"+getcharid(3));
+		dispbottom "^FF8800[Arena Points: "+F_InsertComma1(getd("#arena_points_"+getcharid(3)))+"]^000000 ^00FF00[Farming Time: "+callfunc("t",getd("#arena_farming_time_"+getcharid(3)))+"]^000000 ^FF0000[Remaining: "+callfunc("t",.@remaining_total)+"]^000000";
+		
+		// Mark timer as running for this account
+		setd "#arena_timer_running_"+getcharid(3), 1;
+		
+		// Start individual timer
+		addtimer 1000, "arena_player_timer::OnPlayerTimerTick";
+		return;
+}
+
+
+
+
+
+
+
+
+
+
+
+// Individual player timer system - BAT_B02 ONLY (Account-based data)
+bat_b02,0,0,0,0	script	arena_player_timer	-1,{
+
+	OnEnter:
+		// When player enters bat_b02, start their individual timer
+		end;
+		end;
+		
+	OnPCLoginEvent:
+		// Check if player is in cooldown when they login in the arena
+		if(strcharinfo(3) == "bat_b02" && getd("#arena_cooldown_start_"+getcharid(3)) > 0){
+			.@cooldown_remaining = getd("#arena_cooldown_start_"+getcharid(3)) + 43200 - gettimetick(2);
+			if(.@cooldown_remaining > 0){
+				message strcharinfo(0), "^FF0000[Monster Arena] You are in cooldown period!^000000";
+				message strcharinfo(0), "^FF0000[Monster Arena] You are being kicked out.^000000";
+				warp "prontera",156,191;
+				end;
+			}
+		}
+		end;
+		
+	OnExit:
+		// When player leaves bat_b02, stop their individual timer
+		setd "#arena_timer_running_"+getcharid(3), 0;
+		end;
+		
+
+	
+	OnTimerTick:
+		// Simple timer that runs every second using standard addtimer
+		// This will increment the individual account timer for players in bat_b02
+		
+
+		
+		// Continue the timer
+		addtimer 1000, "arena_player_timer::OnTimerTick";
+		end;
+		
+	OnPlayerTimerTick:
+		// Player-specific timer that can access player data
+		// This runs every second and can access the current player's account data
+		
+		// Check VIP status and set farming time limit
+		if(getgroupid() == 5){ // VIP players (GM level 5)
+			set .@farming_limit, 21600; // 6 hours = 21600 seconds for VIP
+			set .@farming_hours, 6;
+		} else {
+			set .@farming_limit, 14400; // 4 hours = 14400 seconds for normal players
+			set .@farming_hours, 4;
+		}
+		
+		// Check if player is in bat_b02 (timer will run for all players in map)
+		if(strcharinfo(3) == "bat_b02"){
+			// Check daily reset for players already inside arena
+			.@current_day = gettime(4); // Current day of year
+			if(getd("#arena_last_reset_"+getcharid(3)) != .@current_day){
+				// Daily reset for player already inside arena
+				setd "#arena_farming_time_"+getcharid(3), 0;
+				setd "#arena_cooldown_start_"+getcharid(3), 0;
+				setd "#arena_ip_cooldown_"+getcharid(3), 0; // Reset IP cooldown on daily reset
+				setd "#arena_last_reset_"+getcharid(3), .@current_day;
+				message strcharinfo(0), "^00FF00[Monster Arena] Daily reset applied! Farming time reset to 0.^000000";
+				message strcharinfo(0), "^00FF00[Monster Arena] You can now farm for "+.@farming_hours+" hours again.^000000";
+			}
+			
+			// Check if timer is not paused
+			if(getd("#arena_timer_running_"+getcharid(3)) == 1){
+				// Increment the individual account timer
+				setd "#arena_farming_time_"+getcharid(3), getd("#arena_farming_time_"+getcharid(3)) + 1;
+				
+				// Check if player has reached farming limit and kick them out
+				if(getd("#arena_farming_time_"+getcharid(3)) >= .@farming_limit){
+					// Set cooldown start time
+					if(getd("#arena_cooldown_start_"+getcharid(3)) == 0){
+						setd "#arena_cooldown_start_"+getcharid(3), gettimetick(2);
+					}
+					
+					// Kick player out of arena
+					message strcharinfo(0), "^FF0000[Monster Arena] You have reached your "+.@farming_hours+"-hour farming limit!^000000";
+					message strcharinfo(0), "^FF0000[Monster Arena] You are being kicked out of the arena.^000000";
+					message strcharinfo(0), "^FF0000[Monster Arena] 12-hour cooldown period activated.^000000";
+					announce "[Monster Arena] "+strcharinfo(0)+" Has been Kicked out in Monster Arena, Entry Expired. "+strcharinfo(0)+" have alot of points :)",0,0xB03060;
+					// Remove arena access
+					setd "#arena_access_"+getcharid(3), 0;
+					setd "#arena_timer_running_"+getcharid(3), 0;
+					
+					// Warp player out
+					warp "prontera",156,191;
+					// Check for violation (exceeding limit) - Using function
+					callfunc "arena_farming_violation_check", getcharid(3), strcharinfo(0), (getgroupid() == 5 ? 1 : 0);
+					end;
+				}
+				
+				// Warning system - alert players when approaching limit
+				if(getd("#arena_farming_time_"+getcharid(3)) == (.@farming_limit - 600)){ // 10 minute warning
+					message strcharinfo(0), "^FFFF00[Monster Arena] WARNING: 10 minutes remaining before kickout!^000000";
+				}
+				if(getd("#arena_farming_time_"+getcharid(3)) == (.@farming_limit - 300)){ // 5 minute warning
+					message strcharinfo(0), "^FFFF00[Monster Arena] WARNING: 5 minutes remaining before kickout!^000000";
+				}
+				if(getd("#arena_farming_time_"+getcharid(3)) == (.@farming_limit - 60)){ // 1 minute warning
+					message strcharinfo(0), "^FF0000[Monster Arena] WARNING: 1 minute remaining before kickout!^000000";
+				}
+			}
+		}
+		
+		// Continue the timer ONLY if player is still in bat_b02
+		if(strcharinfo(3) == "bat_b02"){
+			addtimer 1000, "arena_player_timer::OnPlayerTimerTick";
+		}
+		end;
+		
+	OnPlayerTick:
+		// Individual player timer that runs every second for this specific player
+
+		
+		// Check if player still has arena access
+		if(getd("#arena_access_"+getcharid(3)) == 1){
+			// Check if player is still in bat_b02
+			if(strcharinfo(3) == "bat_b02"){
+				// Increment farming time for this account
+				setd "#arena_farming_time_"+getcharid(3), getd("#arena_farming_time_"+getcharid(3)) + 1;
+				
+				// Visual indicator - show a small dot to confirm timer is active (every 30 seconds)
+				if(getd("#arena_farming_time_"+getcharid(3)) % 30 == 0){
+					dispbottom "^00FF00[?] Custom Timer Active^000000";
+				}
+				
+				// Continue timer for next second using our custom function
+				addplayertimer 1000, "arena_player_timer::OnPlayerTick", getcharid(3);
+			} else {
+				// Player left the arena map
+			}
+		} else {
+			// Player lost arena access
+		}
+		end;
+	
+
+	
+	OnInit:
+		// Initialize the timer system
+		end;
+		
+
+		
+		OnTimer1000:
+		// NPC timer that runs every second
+		
+		// Check if there are players in the arena
+		.@arena_players = getmapusers("bat_b02");
+		
+		if(.@arena_players > 0){
+			// Increment the auto timer
+			set $arena_individual_auto_timer, $arena_individual_auto_timer + 1;
+		}
+		
+		// Continue the timer
+		initnpctimer;
+		end;
+		
+
+	
+
+}
+
+
+
+
+
+//==========================================ARENA FUNCTIONS==============================================
+// Functions that can be called by other NPCs - ACCOUNT BASED
+function	script	arena_grant_access	{
+	// Grant arena access to a player (ACCOUNT-BASED)
+	// Usage: callfunc "arena_grant_access", <account_id>, <char_name>, <entry_type>;
+	.@account_id = getarg(0);
+	.@char_name$ = getarg(1);
+	.@entry_type = getarg(2);
+	
+	// ACCOUNT-BASED: Set access for this account
+	setd "#arena_access_"+.@account_id, 1;
+	setd "#arena_char_name_"+.@account_id, .@char_name$;
+	
+	// Initialize arena points if not set
+	// Only initialize if variable doesn't exist (not when it's 0)
+	.@arena_points = getd("#arena_points_"+.@account_id);
+
+	
+	// ACCOUNT-BASED: Initialize farming time for this account if not set
+	// Only initialize if variable doesn't exist (not when it's 0)
+	.@farming_time = getd("#arena_farming_time_"+.@account_id);
+	if(.@farming_time == 0){
+		setd "#arena_farming_time_"+.@account_id, 0;
+		//dispbottom "^FF0000[DEBUG] Initialized farming time to 0 for account: "+.@account_id+"^000000";
+	}
+	
+	// Check if 24 hours have passed since last reset (daily reset system)
+	.@current_day = gettime(4); // Current day of year
+	if(getd("#arena_last_reset_"+.@account_id) != .@current_day){
+		// New day, reset farming time and cooldown
+		setd "#arena_farming_time_"+.@account_id, 0;
+		setd "#arena_cooldown_start_"+.@account_id, 0; // Reset cooldown on daily reset
+		setd "#arena_ip_cooldown_"+.@account_id, 0; // Reset IP cooldown on daily reset
+		setd "#arena_last_reset_"+.@account_id, .@current_day;
+		//dispbottom "^FF0000[DEBUG] Daily reset applied for account: "+.@account_id+" Day: "+.@current_day+"^000000";
+	}
+	
+	// Increment active players counter
+	set $arena_active_players, $arena_active_players + 1;
+	return 1;
+}
+
+function	script	arena_remove_access	{
+	// Remove arena access from a player (ACCOUNT-BASED)
+	// Usage: callfunc "arena_remove_access", <account_id>;
+	.@account_id = getarg(0);
+	
+	// ACCOUNT-BASED: Remove access for this account
+	setd "#arena_access_"+.@account_id, 0;
+	
+	// Decrement active players counter
+	set $arena_active_players, $arena_active_players - 1;
+	
+	return 1;
+}
+
+function	script	arena_add_points	{
+	// Add arena points to a player (ACCOUNT-BASED)
+	// Usage: callfunc "arena_add_points", <account_id>, <points>;
+	.@account_id = getarg(0);
+	.@points = getarg(1);
+	
+	// ACCOUNT-BASED: Add points to this account
+	setd "#arena_points_"+.@account_id, getd("#arena_points_"+.@account_id) + .@points;
+	
+	return 1;
+}
+
+function	script	arena_farming_violation_check	{
+	.@account_id = getarg(0);
+	.@char_name$ = getarg(1);
+	.@farming_time = getd("#arena_farming_time_"+.@account_id);
+	.@is_vip = getarg(2); // Pass VIP status as argument
+	
+	// Set farming time limit based on VIP status
+	if(.@is_vip == 1){ // VIP players
+		set .@farming_limit, 21600; // 6 hours = 21600 seconds for VIP
+		set .@farming_hours, 6;
+	} else {
+		set .@farming_limit, 14400; // 4 hours = 14400 seconds for normal players
+		set .@farming_hours, 4;
+	}
+	
+	// Check if farming time exceeds limit
+	if(.@farming_time > .@farming_limit){
+		// Log violation
+		setd "#arena_violation_"+.@account_id, gettimetick(2);
+		setd "#arena_violation_time_"+.@account_id, .@farming_time;
+		setd "#arena_violation_limit_"+.@account_id, .@farming_limit;
+		setd "#arena_violation_char_"+.@account_id, .@char_name$;
+		
+		// Report to GM (Account 99)
+		announce "[VIOLATION] Account "+.@account_id+" ("+.@char_name$+") exceeded "+.@farming_hours+"-hour limit! Farming time: "+callfunc("t",.@farming_time)+"",0,0xFF0000;
+		
+		return 1; // Violation detected
+	}
+	return 0; // No violation
+}
+
+
+
+// Time formatting function from the provided script
+function	script	t	{
+	function s;
+		set .@left, getarg(0);
+		if ( .@left <= 0 ) return getarg(0);
+		set .@day, .@left / 86400;
+		set .@hour, .@left % 86400 / 3600;
+		set .@min, .@left % 3600 / 60;
+		set .@sec, .@left % 60;
+		return ( ( .@day ? .@day +" day"+ s( .@day ) : "" ) + ( .@hour ? .@hour +" hour"+ s( .@hour ) : "" ) + ( .@min ? .@min +" min"+ s( .@min ) : "" ) + ( .@sec ? .@sec +" sec"+ s( .@sec,1 ) : "" ) );
+	function s { return ( ( getarg(0) > 1 ? "s" : "" ) + ( getarg(1,0) ? "" : " " ) ); }
+}
+
+// Arena exit warp script
+//bat_b02,389,2,0	warp	retransfer	1,1,bat_b02,0,0
+//bat_b02,17,290,0	warp	retransfer1	1,1,bat_b02,0,0
+
+// Monster kill scripts with updated point system - ALL USING ACCOUNT-BASED SYSTEM
 -	script	ifrit_main	-1,{
    OnKill:
-	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
+	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 50;
-		#arenapoints += .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+		.@aid = getcharid(3);
+		callfunc "arena_add_points", .@aid, .@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
 	}
 	end;
 }
 
 -	script	valk_main	-1,{
    OnKill:
-	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
+	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 50;
-		#arenapoints += .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+		.@aid = getcharid(3);
+		callfunc "arena_add_points", .@aid, .@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
 	}
 	end;
 }
 
 -	script	bapho_main	-1,{
    OnKill:
-	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
+	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 100;
-		#arenapoints += .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+		.@aid = getcharid(3);
+		callfunc "arena_add_points", .@aid, .@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
 	}
 	end;
 }
 
 -	script	ktull_main	-1,{
    OnKill:
-	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
+	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 50;
-		#arenapoints += .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+		.@aid = getcharid(3);
+		callfunc "arena_add_points", .@aid, .@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
 	}
 	end;
 }
 
 -	script	beelze_main	-1,{
    OnKill:
-	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
+	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 50;
-		#arenapoints += .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+		.@aid = getcharid(3);
+		callfunc "arena_add_points", .@aid, .@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
 	}
 	end;
 }
 
 -	script	sword_main	-1,{
    OnKill:
-	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
+	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 4;
-		#arenapoints += .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+		.@aid = getcharid(3);
+		callfunc "arena_add_points", .@aid, .@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
 	}
 	end;
 }
 
 -	script	bow_main	-1,{
    OnKill:
-	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
+	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 4;
-		#arenapoints += .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+		.@aid = getcharid(3);
+		callfunc "arena_add_points", .@aid, .@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
 	}
 	end;
 }
 
 -	script	ice_main	-1,{
    OnKill:
-	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
+	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 4;
-		#arenapoints += .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+		.@aid = getcharid(3);
+		callfunc "arena_add_points", .@aid, .@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
 	}
 	end;
 }
 
 -	script	flower_main	-1,{
    OnKill:
-	if (strcharinfo(3) == "bat_b02" && #allowarenaroom == 1){
+	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 20;
-		#arenapoints += .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma( #arenapoints )+" Arena Points now.";
+		.@aid = getcharid(3);
+		callfunc "arena_add_points", .@aid, .@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
 	}
 	end;
 }
@@ -372,6 +1409,102 @@ bat_b02,0,0,0,0	monster	Arena Bow Guardian	1950,30,180000,0,"bow_main::OnKill"
 bat_b02,0,0,0,0	monster	Arena Ice Titan	1788,25,180000,0,"ice_main::OnKill"
 bat_b02,0,0,0,0	monster	Arena Blue Flower	1934,5,600000,0,"flower_main::OnKill"
 
+//===========================TIMER UTILITY FUNCTIONS========================
+// These functions can be called from other scripts to manage timer data
+
+// Function to reset timer for a specific account
+function	script	arena_reset_timer	{
+	.@account_id = getarg(0);
+	if(.@account_id > 0){
+		setd "#arena_farming_time_"+.@account_id, 0;
+		return 1;
+	}
+	return 0;
+}
+
+// Function to add time to timer for a specific account
+function	script	arena_add_timer	{
+	.@account_id = getarg(0);
+	.@seconds = getarg(1);
+	if(.@account_id > 0 && .@seconds > 0){
+		setd "#arena_farming_time_"+.@account_id, getd("#arena_farming_time_"+.@account_id) + .@seconds;
+		return 1;
+	}
+	return 0;
+}
+
+// Function to remove time from timer for a specific account
+function	script	arena_remove_timer	{
+	.@account_id = getarg(0);
+	.@seconds = getarg(1);
+	if(.@account_id > 0 && .@seconds > 0){
+		.@current_time = getd("#arena_farming_time_"+.@account_id);
+		if(.@current_time >= .@seconds){
+			setd "#arena_farming_time_"+.@account_id, .@current_time - .@seconds;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+// Function to set specific time for a specific account
+function	script	arena_set_timer	{
+	.@account_id = getarg(0);
+	.@seconds = getarg(1);
+	if(.@account_id > 0 && .@seconds >= 0 && .@seconds <= 14400){
+		setd "#arena_farming_time_"+.@account_id, .@seconds;
+		return 1;
+	}
+	return 0;
+}
+
+// Function to get current timer value for a specific account
+function	script	arena_get_timer	{
+	.@account_id = getarg(0);
+	if(.@account_id > 0){
+		return getd("#arena_farming_time_"+.@account_id);
+	}
+	return 0;
+}
+
+// Function to get remaining time for a specific account
+function	script	arena_get_remaining_time	{
+	.@account_id = getarg(0);
+	if(.@account_id > 0){
+		return 14400 - getd("#arena_farming_time_"+.@account_id);
+	}
+	return 0;
+}
+
+// Function to check if player is in cooldown
+function	script	arena_check_cooldown	{
+	.@account_id = getarg(0);
+	if(.@account_id > 0){
+		if(getd("#arena_cooldown_start_"+.@account_id) > 0){
+			.@cooldown_remaining = getd("#arena_cooldown_start_"+.@account_id) + 43200 - gettimetick(2);
+			if(.@cooldown_remaining > 0){
+				return .@cooldown_remaining; // Return remaining cooldown time in seconds
+			} else {
+				// Cooldown expired, reset it
+				setd "#arena_cooldown_start_"+.@account_id, 0;
+				return 0;
+			}
+		}
+		return 0; // No cooldown active
+	}
+	return 0;
+}
+
+// Function to reset cooldown for a specific account
+function	script	arena_reset_cooldown	{
+	.@account_id = getarg(0);
+	if(.@account_id > 0){
+		setd "#arena_cooldown_start_"+.@account_id, 0;
+		return 1;
+	}
+	return 0;
+}
+
 //===========================random warp portals========================
 //bat_b02,9,283,0	warp	retransfer2	1,1,bat_b02,0,0
 //bat_b02,389,6,0	warp	retransfer3	1,1,bat_b02,0,0
@@ -379,4 +1512,83 @@ bat_b02,0,0,0,0	monster	Arena Blue Flower	1934,5,600000,0,"flower_main::OnKill"
 
 bat_b02,389,2,0	warp	retransfer	1,1,bat_b02,0,0
 bat_b02,17,290,0	warp	retransfer1	1,1,bat_b02,0,0
+
+//==========================================arena points shop==============================================
+-	pointshop	arena_points_shop	-1,getd("#arena_points_"+getcharid(3)),14512:1000,12219:2000
+
+//==========================================MONSTER ARENA TIMER COMMAND==============================================
+-	script	monster_arena_timer_cmd	-1,{
+
+		OnInit:
+		// Bind monster arena timer command
+		bindatcmd "monsterarenatimer", strnpcinfo(3)+"::OnCommandEvent";
+		end;
+		
+	OnCommandEvent:
+		// Check VIP status and set farming time limit
+		if(getgroupid() == 5){ // VIP players (GM level 5)
+			set .@farming_limit, 21600; // 6 hours = 21600 seconds for VIP
+			set .@farming_hours, 6;
+		} else {
+			set .@farming_limit, 14400; // 4 hours = 14400 seconds for normal players
+			set .@farming_hours, 4;
+		}
+		
+		// Show timer status and remaining time before getting kicked out
+		dispbottom "^FF8800[Monster Arena Timer Status]^000000";
+		dispbottom "Account ID: "+getcharid(3);
+		if(getgroupid() == 5){
+			dispbottom "^FF8800[VIP STATUS]^000000 You have VIP privileges!";
+		}
+		dispbottom "Arena Access: "+getd("#arena_access_"+getcharid(3));
+		dispbottom "Farming Time: "+callfunc("t",getd("#arena_farming_time_"+getcharid(3)));
+		dispbottom "Remaining Time: "+callfunc("t",.@farming_limit-getd("#arena_farming_time_"+getcharid(3)));
+		dispbottom "Current Map: "+strcharinfo(3);
+		
+		// Check unlimited access status
+		if( getd("#arena_unlimited_access_"+getcharid(3)) > gettimetick(2) ){
+			set .@unlimited_remaining, getd("#arena_unlimited_access_"+getcharid(3)) - gettimetick(2);
+			dispbottom "^008800[UNLIMITED ACCESS] Active until: "+callfunc("t",.@unlimited_remaining)+"^000000";
+		} else {
+			dispbottom "^FF0000[UNLIMITED ACCESS] Not active^000000";
+		}
+		
+		// Check cooldown status
+		if( getd("#arena_cooldown_start_"+getcharid(3)) > 0 ){
+			.@cooldown_remaining = getd("#arena_cooldown_start_"+getcharid(3)) + 43200 - gettimetick(2); // 12 hours = 43200 seconds
+			if( .@cooldown_remaining > 0 ){
+				dispbottom "^FF0000[COOLDOWN] You are in 12-hour cooldown period!^000000";
+				dispbottom "^FF0000Wait "+callfunc("t",.@cooldown_remaining)+" before farming again.^000000";
+			} else {
+				dispbottom "^00FF00[COOLDOWN] Cooldown period has expired.^000000";
+			}
+		} else {
+			dispbottom "^00FF00[COOLDOWN] No cooldown active.^000000";
+		}
+		
+		// Check if player is in arena and show kick warning
+		if(strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
+			set .@remaining_seconds, .@farming_limit - getd("#arena_farming_time_"+getcharid(3));
+			if(.@remaining_seconds <= 0){
+				dispbottom "^FF0000[WARNING] You have exceeded your "+.@farming_hours+"-hour limit!^000000";
+				dispbottom "^FF0000You will be kicked out of the arena soon.^000000";
+			} else if(.@remaining_seconds <= 300){
+				dispbottom "^FFFF00[WARNING] Less than 5 minutes remaining!^000000";
+				dispbottom "^FFFF00You will be kicked out when time expires.^000000";
+			} else if(.@remaining_seconds <= 1800){
+				dispbottom "^00FF00[INFO] Less than 30 minutes remaining.^000000";
+			}
+		}
+		end;
+		
+
+	
+
+}
+
+
+		
+
+
+
 
