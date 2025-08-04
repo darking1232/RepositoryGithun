@@ -1,8 +1,8 @@
-prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
-	// Hourly Rewards System NPC
+prontera,164,188,3	script	Activity Points::ActivityRewards	4_F_KAFRA1,{
+	// Activity Points System NPC
 	// Players register, stay active for 1 hour, then claim rewards
 	
-	.@npcname$ = "^00AA00 Hourly Rewards ^000000";
+	.@npcname$ = "^00AA00 Activity Points ^000000";
 	.@header$ = "[^0000ff" + .@npcname$ + "^000000]";
 	
 	
@@ -14,7 +14,7 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 	// Check for GM modifications to this player's timer
 	.@gm_modify = 0;
 	.@gm_reset = 0;
-	.@rows = query_sql("SELECT `gm_modify`, `gm_reset` FROM `hourly_reward_gm` WHERE `account_id` = " + .@account_id, .@gm_modify, .@gm_reset);
+	.@rows = query_sql("SELECT `gm_modify`, `gm_reset` FROM `activity_reward_gm` WHERE `account_id` = " + .@account_id, .@gm_modify, .@gm_reset);
 	if (.@rows > 0) {
 		.@gm_modify = .@gm_modify;
 		.@gm_reset = .@gm_reset;
@@ -23,19 +23,19 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 	// Apply GM modifications if any
 	if (.@gm_reset == 1) {
 		// GM reset this player's timer
-		#hourly_registered = 0;
-		#hourly_start_time = 0;
-		#hourly_last_activity = 0;
+		#activity_registered = 0;
+		#activity_start_time = 0;
+		#last_activity = 0;
 		// Clear the GM reset flag
-		query_sql("UPDATE `hourly_reward_gm` SET `gm_reset` = 0 WHERE `account_id` = " + .@account_id);
+		query_sql("UPDATE `activity_reward_gm` SET `gm_reset` = 0 WHERE `account_id` = " + .@account_id);
 	} else if (.@gm_modify != 0) {
 		// GM modified this player's timer
-		if (#hourly_registered == 1) {
+		if (#activity_registered == 1) {
 			// Apply the modification to start time (subtract to increase elapsed time)
-			#hourly_start_time = #hourly_start_time - .@gm_modify;
+			#activity_start_time = #activity_start_time - .@gm_modify;
 		}
 		// Clear the GM modify flag
-		query_sql("UPDATE `hourly_reward_gm` SET `gm_modify` = 0 WHERE `account_id` = " + .@account_id);
+		query_sql("UPDATE `activity_reward_gm` SET `gm_modify` = 0 WHERE `account_id` = " + .@account_id);
 	}
 	
 	// GM Menu (only for GM level 99)
@@ -44,7 +44,7 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 		mes "^FF0000[GM ADMIN MENU]^000000";
 		mes " ";
 		mes "Select an option:";
-		mes "^00AA00• Reset All Players^000000 - Reset all hourly timers";
+		mes "^00AA00• Reset All Players^000000 - Reset all activity timers";
 		mes "^00AA00• Modify Player Timer^000000 - Adjust specific player time";
 		mes "^00AA00• View Player Status^000000 - Check player's timer status";
 		mes "^FF0000• Go Back^000000 - Return to normal menu";
@@ -59,7 +59,7 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 				mes .@header$;
 				mes "^FF0000[RESET ALL PLAYERS]^000000";
 				mes " ";
-				mes "This will reset ALL players' hourly timers.";
+				mes "This will reset ALL players' activity timers.";
 				mes "Are you sure you want to continue?";
 				mes " ";
 				mes "^FF0000WARNING: This action cannot be undone!^000000";
@@ -68,23 +68,23 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 				if (select("Confirm Reset:Cancel") == 1) {
 					// Execute reset all players
 					// First check if table exists and has records
-					.@table_check = query_sql("SELECT COUNT(*) FROM `hourly_reward_gm`", .@record_count);
+					.@table_check = query_sql("SELECT COUNT(*) FROM `activity_reward_gm`", .@record_count);
 					if (.@table_check == 0) {
 						mes .@header$;
 						mes "^FF0000[ERROR]^000000";
 						mes " ";
-						mes "Database table 'hourly_reward_gm' not found!";
+						mes "Database table 'activity_reward_gm' not found!";
 						mes "Please restart the server to create the table.";
 						close;
 					}
 					
-					.@reset_result = query_sql("UPDATE `hourly_reward_gm` SET `registered` = 0, `start_time` = 0, `last_activity` = 0, `gm_modify` = 0, `gm_reset` = 0");
+					.@reset_result = query_sql("UPDATE `activity_reward_gm` SET `registered` = 0, `start_time` = 0, `last_activity` = 0, `gm_modify` = 0, `gm_reset` = 0");
 					
 					mes .@header$;
 					if (.@reset_result > 0) {
 						mes "^00AA00[SUCCESS]^000000";
 						mes " ";
-						mes "All players' hourly timers have been reset.";
+						mes "All players' activity timers have been reset.";
 						mes "All players will need to register again.";
 						mes " ";
 						mes "Affected records: ^00AA00" + .@reset_result + "^000000";
@@ -157,15 +157,24 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 						}
 						
 						// Add minutes to start time (subtract from start time to increase elapsed time)
-						// Store the modification in the hourly_reward_gm table
-						query_sql("INSERT INTO `hourly_reward_gm` (`account_id`, `gm_modify`) VALUES (" + .@target_account_id + ", " + (.@minutes_to_add * 60) + ") ON DUPLICATE KEY UPDATE `gm_modify` = `gm_modify` + " + (.@minutes_to_add * 60));
+						// Store the modification in the activity_reward_gm table
+						
+						// Add minutes to start time (subtract from start time to increase elapsed time)
+						// Store the modification in the activity_reward_gm table
+						query_sql("INSERT INTO `activity_reward_gm` (`account_id`, `gm_modify`) VALUES (" + .@target_account_id + ", " + (.@minutes_to_add * 60) + ") ON DUPLICATE KEY UPDATE `gm_modify` = `gm_modify` + " + (.@minutes_to_add * 60));
+						
+						// Log GM action for audit trail
+						query_sql("INSERT INTO `activity_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity`, `reward_activity_points`) VALUES (" + .@target_account_id + ", 'GM_" + escape_sql(strcharinfo(0)) + "', 'gm_modify_add', " + .@minutes_to_add + ", 0)");
+						
 						next;
 						mes .@header$;
 						mes "^00AA00[SUCCESS]^000000";
 						mes " ";
 						mes "Added ^00AA00" + .@minutes_to_add + " minutes^000000 to Account ID: ^00AA00" + .@target_account_id + "^000000";
 						mes " ";
-						mes "Note: The player must use @hourlyrewards or talk to the NPC for the modification to take effect.";
+						mes "Note: The player must use @activityrewards or talk to the NPC for the modification to take effect.";
+						mes " ";
+						mes "^FFFF00[GM ACTION LOGGED]^000000";
 						close;
 						break;
 						
@@ -187,15 +196,24 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 						}
 						
 						// Remove minutes from start time (add to start time to decrease elapsed time)
-						// Store the modification in the hourly_reward_gm table
-						query_sql("INSERT INTO `hourly_reward_gm` (`account_id`, `gm_modify`) VALUES (" + .@target_account_id + ", -" + (.@minutes_to_remove * 60) + ") ON DUPLICATE KEY UPDATE `gm_modify` = `gm_modify` - " + (.@minutes_to_remove * 60));
+						// Store the modification in the activity_reward_gm table
+						
+						// Remove minutes from start time (add to start time to decrease elapsed time)
+						// Store the modification in the activity_reward_gm table
+						query_sql("INSERT INTO `activity_reward_gm` (`account_id`, `gm_modify`) VALUES (" + .@target_account_id + ", -" + (.@minutes_to_remove * 60) + ") ON DUPLICATE KEY UPDATE `gm_modify` = `gm_modify` - " + (.@minutes_to_remove * 60));
+						
+						// Log GM action for audit trail
+						query_sql("INSERT INTO `activity_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity`, `reward_activity_points`) VALUES (" + .@target_account_id + ", 'GM_" + escape_sql(strcharinfo(0)) + "', 'gm_modify_remove', " + .@minutes_to_remove + ", 0)");
+						
 						next;
 						mes .@header$;
 						mes "^00AA00[SUCCESS]^000000";
 						mes " ";
 						mes "Removed ^FF0000" + .@minutes_to_remove + " minutes^000000 from Account ID: ^00AA00" + .@target_account_id + "^000000";
 						mes " ";
-						mes "Note: The player must use @hourlyrewards or talk to the NPC for the modification to take effect.";
+						mes "Note: The player must use @activityrewards or talk to the NPC for the modification to take effect.";
+						mes " ";
+						mes "^FFFF00[GM ACTION LOGGED]^000000";
 						close;
 						break;
 						
@@ -210,13 +228,18 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 						
 						if (select("Confirm Reset:Cancel") == 1) {
 							// Reset timer for specific account
-							// Store the reset flag in the hourly_reward_gm table
-							query_sql("INSERT INTO `hourly_reward_gm` (`account_id`, `gm_reset`) VALUES (" + .@target_account_id + ", 1) ON DUPLICATE KEY UPDATE `gm_reset` = 1");
+							// Store the reset flag in the activity_reward_gm table
+							query_sql("INSERT INTO `activity_reward_gm` (`account_id`, `gm_reset`) VALUES (" + .@target_account_id + ", 1) ON DUPLICATE KEY UPDATE `gm_reset` = 1");
+							
+							// Log GM action for audit trail
+							query_sql("INSERT INTO `activity_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity`, `reward_activity_points`) VALUES (" + .@target_account_id + ", 'GM_" + escape_sql(strcharinfo(0)) + "', 'gm_reset', 0, 0)");
 							
 							mes .@header$;
 							mes "^00AA00[SUCCESS]^000000";
 							mes " ";
 							mes "Timer reset for Account ID: ^00AA00" + .@target_account_id + "^000000";
+							mes " ";
+							mes "^FFFF00[GM ACTION LOGGED]^000000";
 							close;
 						} else {
 							mes .@header$;
@@ -260,8 +283,8 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 				.@start_time = 0;
 				.@last_activity = 0;
 				
-				// Check for player data in the hourly_reward_gm table
-				.@rows = query_sql("SELECT `registered`, `start_time`, `last_activity` FROM `hourly_reward_gm` WHERE `account_id` = " + .@view_account_id, .@registered, .@start_time, .@last_activity);
+				// Check for player data in the activity_reward_gm table
+				.@rows = query_sql("SELECT `registered`, `start_time`, `last_activity` FROM `activity_reward_gm` WHERE `account_id` = " + .@view_account_id, .@registered, .@start_time, .@last_activity);
 				
 				// Check if we have actual registration data in the database
 				// The database now stores registration status when players register
@@ -322,21 +345,20 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 	
 	
 	// Check if registration has reset (new day)
-	if (#hourly_registered_date != .@current_date) {
-		#hourly_registered = 0;
-		#hourly_start_time = 0;
-		#hourly_last_activity = 0;
-		#hourly_registered_date = .@current_date;
+	if (#activity_registered_date != .@current_date) {
+		#activity_registered = 0;
+		#activity_start_time = 0;
+		#last_activity = 0;
+		#activity_registered_date = .@current_date;
 	}
 	
 	// Check if player is registered
-	if (#hourly_registered == 0) {
+	if (#activity_registered == 0) {
 		mes .@header$;
-		mes "Welcome to the Hourly Rewards System!";
+		mes "Welcome to the Activity Points System!";
 		mes " ";
 		mes "Register to start earning rewards:";
 		mes "^00AA00• 2 Activity Points per hour^000000";
-		mes "^00AA00• 100 Hourly Points per hour^000000";
 		mes " ";
 		mes "Requirements:";
 		mes "• Stay active for 1 hour (no AFK for 15+ minutes)";
@@ -346,7 +368,7 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 		mes "• Chatroom activity is considered AFK";
 		mes "• Talk to NPC when AFK warning appears to continue timer";
 		mes " ";
-		mes "Use @hourlyrewards to check your progress anytime!";
+		mes "Use @activityrewards to check your progress anytime!";
 		mes " ";
 		mes "Would you like to register?";
 		next;
@@ -364,24 +386,24 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 			}
 			// If verification passed, continue with registration
 			
-			#hourly_registered = 1;
-			#hourly_start_time = .@current_time;
-			#hourly_last_activity = .@current_time;
-			#hourly_registered_date = .@current_date;
+			#activity_registered = 1;
+			#activity_start_time = .@current_time;
+			#last_activity = .@current_time;
+			#activity_registered_date = .@current_date;
 			
 			// Store registration data in database for GM menu access
-			query_sql("INSERT INTO `hourly_reward_gm` (`account_id`, `registered`, `start_time`, `last_activity`) VALUES (" + .@account_id + ", 1, " + .@current_time + ", " + .@current_time + ") ON DUPLICATE KEY UPDATE `registered` = 1, `start_time` = " + .@current_time + ", `last_activity` = " + .@current_time);
+			query_sql("INSERT INTO `activity_reward_gm` (`account_id`, `registered`, `start_time`, `last_activity`) VALUES (" + .@account_id + ", 1, " + .@current_time + ", " + .@current_time + ") ON DUPLICATE KEY UPDATE `registered` = 1, `start_time` = " + .@current_time + ", `last_activity` = " + .@current_time);
 			
 			// Log registration
-			query_sql("INSERT INTO `hourly_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity_points`, `reward_hourly_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'register', 0, 0)");
+			query_sql("INSERT INTO `activity_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity`, `reward_activity_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'register', 0, 0)");
 			
 			mes .@header$;
 			mes "Registration successful!";
 			mes " ";
-			mes "Your hourly timer has started.";
+			mes "Your activity timer has started.";
 			mes "Stay active and return in 1 hour to claim your reward.";
 			mes " ";
-			mes "Use @hourlyrewards to check your progress.";
+			mes "Use @activityrewards to check your progress.";
 			close;
 			break;
 			
@@ -400,13 +422,13 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 		mes "• Logging out for 15+ minutes";
 			mes " ";
 			mes "^00AA00 AFK Prevention:^000000";
-			mes "• Use @hourlyrewards command to check AFK status";
+			mes "• Use @activityrewards command to check AFK status";
 			mes "• If warning appears, visit this NPC immediately";
 			mes "• Choose 'Continue Timer' to reset AFK timer";
 			mes "• This is the ONLY way to prevent timer reset";
 			next;
             mes .@header$;
-			mes "Note: Using @hourlyrewards command does NOT reset AFK timer.";
+			mes "Note: Using @activityrewards command does NOT reset AFK timer.";
 			mes "Only real gameplay activities count as active.";
 			mes " ";
 			mes "Would you like to register now?";
@@ -422,24 +444,24 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 				}
 				// If verification passed, continue with registration
 				
-				#hourly_registered = 1;
-				#hourly_start_time = .@current_time;
-				#hourly_last_activity = .@current_time;
-				#hourly_registered_date = .@current_date;
+				#activity_registered = 1;
+				#activity_start_time = .@current_time;
+				#last_activity = .@current_time;
+				#activity_registered_date = .@current_date;
 				
 				// Store registration data in database for GM menu access
-				query_sql("INSERT INTO `hourly_reward_gm` (`account_id`, `registered`, `start_time`, `last_activity`) VALUES (" + .@account_id + ", 1, " + .@current_time + ", " + .@current_time + ") ON DUPLICATE KEY UPDATE `registered` = 1, `start_time` = " + .@current_time + ", `last_activity` = " + .@current_time);
+				query_sql("INSERT INTO `activity_reward_gm` (`account_id`, `registered`, `start_time`, `last_activity`) VALUES (" + .@account_id + ", 1, " + .@current_time + ", " + .@current_time + ") ON DUPLICATE KEY UPDATE `registered` = 1, `start_time` = " + .@current_time + ", `last_activity` = " + .@current_time);
 				
 				// Log registration
-				query_sql("INSERT INTO `hourly_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity_points`, `reward_hourly_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'register', 0, 0)");
+				query_sql("INSERT INTO `activity_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity`, `reward_activity_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'register', 0, 0)");
 				
 				mes .@header$;
 				mes "Registration successful!";
 				mes " ";
-				mes "Your hourly timer has started.";
+				mes "Your activity timer has started.";
 				mes "Stay active and return in 1 hour to claim your reward.";
 				mes " ";
-				mes "Use @hourlyrewards to check your progress.";
+				mes "Use @activityrewards to check your progress.";
 				close;
 			} else {
 				// Go back to main menu
@@ -457,29 +479,29 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 	}
 	
 	// Player is registered, check if they can claim reward
-	.@time_elapsed = .@current_time - #hourly_start_time;
-	.@time_since_last_activity = .@current_time - #hourly_last_activity;
+	.@time_elapsed = .@current_time - #activity_start_time;
+	.@time_since_last_activity = .@current_time - #last_activity;
 	
 	// Check if player has been AFK for more than 15 minutes
 	if (.@time_since_last_activity > 900) { // 15 minutes = 900 seconds
 		mes .@header$;
 		mes "^FF0000TIMER RESET: You have been AFK for " + (.@time_since_last_activity / 60) + " minutes!^000000";
-		mes "^FF0000Your hourly timer has been reset.^000000";
+		mes "^FF0000Your activity timer has been reset.^000000";
 		mes " ";
 		mes "You need to register again to start earning rewards.";
 		mes " ";
-		mes "Use @hourlyrewards to check your progress anytime.";
+		mes "Use @activityrewards to check your progress anytime.";
 		
 		// Reset registration status so player needs to register again
-		#hourly_registered = 0;
-		#hourly_start_time = 0;
-		#hourly_last_activity = 0;
+		#activity_registered = 0;
+		#activity_start_time = 0;
+		#last_activity = 0;
 		
 		// Update database to reflect reset status
-		query_sql("INSERT INTO `hourly_reward_gm` (`account_id`, `registered`, `start_time`, `last_activity`) VALUES (" + .@account_id + ", 0, 0, 0) ON DUPLICATE KEY UPDATE `registered` = 0, `start_time` = 0, `last_activity` = 0");
+		query_sql("INSERT INTO `activity_reward_gm` (`account_id`, `registered`, `start_time`, `last_activity`) VALUES (" + .@account_id + ", 0, 0, 0) ON DUPLICATE KEY UPDATE `registered` = 0, `start_time` = 0, `last_activity` = 0");
 		
 		// Log AFK reset
-		query_sql("INSERT INTO `hourly_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity_points`, `reward_hourly_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'afk_reset', 0, 0)");
+		query_sql("INSERT INTO `activity_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity`, `reward_activity_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'afk_reset', 0, 0)");
 		close;
 	}
 	
@@ -500,10 +522,10 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 		
 		if (select("Continue Timer:Let Timer Reset") == 1) {
 			// Reset AFK timer and continue
-			#hourly_last_activity = .@current_time;
+			#last_activity = .@current_time;
 			
 			// Log timer extension
-			query_sql("INSERT INTO `hourly_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity_points`, `reward_hourly_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'timer_extend', 0, 0)");
+			query_sql("INSERT INTO `activity_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity`, `reward_activity_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'timer_extend', 0, 0)");
 			
 			mes .@header$;
 			mes "^00AA00Timer Extended!^000000";
@@ -517,16 +539,16 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 			close;
 		} else {
 			// Actually reset the timer immediately when player chooses "Let Timer Reset"
-			#hourly_start_time = .@current_time;
-			#hourly_last_activity = .@current_time;
+			#activity_start_time = .@current_time;
+			#last_activity = .@current_time;
 			
 			// Log manual timer reset
-			query_sql("INSERT INTO `hourly_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity_points`, `reward_hourly_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'manual_reset', 0, 0)");
+			query_sql("INSERT INTO `activity_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity`, `reward_activity_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'manual_reset', 0, 0)");
 			
 			mes .@header$;
 			mes "^FF0000Timer Reset Confirmed^000000";
 			mes " ";
-			mes "Your hourly timer has been reset immediately.";
+			mes "Your activity timer has been reset immediately.";
 			mes "You will need to register again to start earning rewards.";
 			mes " ";
 			mes "Time until reset: ^FF0000" + (900 - .@time_since_last_activity) / 60 + " minutes^000000";
@@ -535,16 +557,59 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 	}
 	
 	// Update last activity time when player interacts with NPC (only if not in AFK warning)
-	#hourly_last_activity = .@current_time;
+	#last_activity = .@current_time;
 	
 	// Check if player can claim reward (1 hour = 3600 seconds)
 	if (.@time_elapsed >= 3600) {
+		// CLAIM VERIFICATION: Check if already claimed recently (within 1 hour)
+		.@last_claim_time = 0;
+		.@last_claim_rows = query_sql("SELECT UNIX_TIMESTAMP(MAX(timestamp)) FROM activity_rewards_log WHERE account_id = " + .@account_id + " AND action = 'claim_reward'", .@last_claim_time);
+		
+		// If player has claimed within the last hour, prevent claiming again
+		if (.@last_claim_rows > 0 && .@last_claim_time > 0 && (.@last_claim_time + 3600) > .@current_time) {
+			.@time_since_last_claim = .@current_time - .@last_claim_time;
+			.@minutes_since_last_claim = .@time_since_last_claim / 60;
+			.@minutes_until_next_claim = (3600 - .@time_since_last_claim) / 60;
+			
+			mes .@header$;
+			mes "^FF0000[CLAIM COOLDOWN ACTIVE]^000000";
+			mes " ";
+			mes "You have already claimed a reward recently!";
+			mes " ";
+			mes "Time since last claim: ^FF0000" + .@minutes_since_last_claim + " minutes^000000";
+			mes "Time until next claim: ^00AA00" + .@minutes_until_next_claim + " minutes^000000";
+			mes " ";
+			mes "You must wait at least 1 hour between claims.";
+			mes " ";
+			mes "Use @activityrewards to check your progress.";
+			close;
+		}
+		
+		// CLAIM VERIFICATION: Check if player is registered and timer is valid
+		if (#activity_registered != 1) {
+			mes .@header$;
+			mes "^FF0000[VERIFICATION FAILED]^000000";
+			mes " ";
+			mes "Your registration status is invalid.";
+			mes "Please register again to claim rewards.";
+			close;
+		}
+		
+		// CLAIM VERIFICATION: Double-check timer validity
+		if (.@time_elapsed < 3600) {
+			mes .@header$;
+			mes "^FF0000[VERIFICATION FAILED]^000000";
+			mes " ";
+			mes "Your timer has not reached 1 hour yet.";
+			mes "Time elapsed: ^FF0000" + (.@time_elapsed / 60) + " minutes^000000";
+			close;
+		}
+		
 		mes .@header$;
 		mes "Congratulations! You've been active for 1 hour.";
 		mes " ";
 		mes "Your rewards:";
 		mes "^00AA00• 2 Activity Points^000000";
-		mes "^00AA00• 100 Hourly Points^000000";
 		mes " ";
 		mes "Would you like to claim your reward?";
 		next;
@@ -559,38 +624,48 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 			}
 			// If verification passed, continue with reward claiming
 			
+			// FINAL VERIFICATION: Check again before giving rewards (prevent race conditions)
+			.@final_check_time = 0;
+			.@final_check_rows = query_sql("SELECT UNIX_TIMESTAMP(MAX(timestamp)) FROM activity_rewards_log WHERE account_id = " + .@account_id + " AND action = 'claim_reward'", .@final_check_time);
+			
+			if (.@final_check_rows > 0 && .@final_check_time > 0 && (.@final_check_time + 3600) > .@current_time) {
+				mes .@header$;
+				mes "^FF0000[CLAIM BLOCKED]^000000";
+				mes " ";
+				mes "A claim was detected while processing your request.";
+				mes "Please wait before trying again.";
+				close;
+			}
+			
 			// Give rewards
-			set #CASHPOINTS, #CASHPOINTS + 2;
-			set #HOURLY_POINTS, #HOURLY_POINTS + 100;
+			set #ACTIVITY_POINTS, #ACTIVITY_POINTS + 2;
 			
 			// Reset timer for next hour
-			#hourly_start_time = .@current_time;
-			#hourly_last_activity = .@current_time;
+			#activity_start_time = .@current_time;
+			#last_activity = .@current_time;
 			
 			// Update database with new timer values
-			query_sql("INSERT INTO `hourly_reward_gm` (`account_id`, `start_time`, `last_activity`) VALUES (" + .@account_id + ", " + .@current_time + ", " + .@current_time + ") ON DUPLICATE KEY UPDATE `start_time` = " + .@current_time + ", `last_activity` = " + .@current_time);
+			query_sql("INSERT INTO `activity_reward_gm` (`account_id`, `start_time`, `last_activity`) VALUES (" + .@account_id + ", " + .@current_time + ", " + .@current_time + ") ON DUPLICATE KEY UPDATE `start_time` = " + .@current_time + ", `last_activity` = " + .@current_time);
 			
 			// Log reward claim
-			query_sql("INSERT INTO `hourly_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity_points`, `reward_hourly_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'claim_reward', 2, 100)");
+			query_sql("INSERT INTO `activity_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity`, `reward_activity_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'claim_reward', 2, 100)");
 			next;
 			mes .@header$;
 			mes "Rewards claimed successfully!";
 			mes " ";
 			mes "You received:";
 			mes "^00AA00• 2 Activity Points^000000";
-			mes "^00AA00• 100 Hourly Points^000000";
 			mes " ";
 			mes "Your timer has been reset.";
 			mes "";
-			mes "Current Activity Points:"+#CASHPOINTS;
-			mes "Current Hourly Points:"+#HOURLY_POINTS;
+			mes "Current Activity Points:"+#ACTIVITY_POINTS;
             		next;
             		mes .@header$;
 			mes "Stay active for another hour to earn more rewards!";
 			mes " ";
 			mes "Note: You need to register again after claiming each reward.";
 			mes " ";
-			mes "Use @hourlyrewards to check your progress.";
+			mes "Use @activityrewards to check your progress.";
 			close;
 		} else {
 			next;
@@ -607,24 +682,63 @@ prontera,164,188,3	script	Hourly Rewards::HourlyRewards	4_F_KAFRA1,{
 	.@seconds_remaining = .@time_remaining % 60;
 	
 	mes .@header$;
-	mes "You are registered for hourly rewards.";
+			mes "You are registered for activity points.";
 	mes " ";
 	mes "Time remaining: ^00AA00" + .@minutes_remaining + "m " + .@seconds_remaining + "s^000000";
 	mes " ";
 	mes "Stay active! Your timer will reset if you go AFK for 15+ minutes.";
 	mes " ";
-	mes "Use @hourlyrewards to check your progress anytime!";
+	mes "Use @activityrewards to check your progress anytime!";
 	mes " ";
-	mes "Tip: Use @hourlyrewards to check AFK status and get warnings.";
-	close;
+	mes "Tip: Use @activityrewards to check AFK status and get warnings.";
+	mes " ";
+	mes "What would you like to do?";
+	next;
+	
+	.@choice = select("Continue:AFK Details:Close");
+	
+	switch(.@choice) {
+		case 1:
+			// Continue - just close
+			close;
+			break;
+			
+		case 2:
+			// Show AFK Details
+			mes .@header$;
+			mes "AFK Detection Details:";
+			mes " ";
+			mes "The following activities are considered AFK:";
+			mes " ";
+			mes "^FF0000 AFK Activities (Timer Resets):^000000";
+			mes "• Being inactive for 15+ minutes";
+			mes "• Using autovend/autotrade";
+			mes "• Being in a chatroom";
+			mes "• Being idle for 15+ minutes (checkidle)";
+			mes "• Logging out for 15+ minutes";
+			mes " ";
+			mes "^00AA00 AFK Prevention:^000000";
+			mes "• Use @activityrewards command to check AFK status";
+			mes "• If warning appears, visit this NPC immediately";
+			mes "• Choose 'Continue Timer' to reset AFK timer";
+			mes "• This is the ONLY way to prevent timer reset";
+			next;
+			close;
+			break;
+			
+		case 3:
+			// Close
+			close;
+			break;
+	}
 	
 OnInit:
-	query_sql("CREATE TABLE IF NOT EXISTS `hourly_rewards_log` (`id` int(11) NOT NULL AUTO_INCREMENT, `account_id` int(11) NOT NULL, `char_name` varchar(32) NOT NULL, `action` varchar(20) NOT NULL, `reward_activity_points` int(11) NOT NULL DEFAULT 0, `reward_hourly_points` int(11) NOT NULL DEFAULT 0, `timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), KEY `account_id` (`account_id`), KEY `char_name` (`char_name`), KEY `action` (`action`), KEY `timestamp` (`timestamp`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-	query_sql("CREATE TABLE IF NOT EXISTS `antibot_log` (`id` int(11) NOT NULL AUTO_INCREMENT, `account_id` int(11) NOT NULL, `char_name` varchar(32) NOT NULL, `action` varchar(20) NOT NULL, `result` varchar(20) NOT NULL, `timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), KEY `account_id` (`account_id`), KEY `char_name` (`char_name`), KEY `action` (`action`), KEY `result` (`result`), KEY `timestamp` (`timestamp`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-	query_sql("CREATE TABLE IF NOT EXISTS `hourly_reward_gm` (`id` int(11) NOT NULL AUTO_INCREMENT, `account_id` int(11) NOT NULL, `registered` tinyint(1) NOT NULL DEFAULT 0, `start_time` bigint(20) NOT NULL DEFAULT 0, `last_activity` bigint(20) NOT NULL DEFAULT 0, `gm_modify` int(11) NOT NULL DEFAULT 0, `gm_reset` tinyint(1) NOT NULL DEFAULT 0, `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `account_id` (`account_id`), KEY `registered` (`registered`), KEY `start_time` (`start_time`), KEY `last_activity` (`last_activity`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+	query_sql("CREATE TABLE IF NOT EXISTS `activity_rewards_log` (`id` int(11) NOT NULL AUTO_INCREMENT, `account_id` int(11) NOT NULL, `char_name` varchar(32) NOT NULL, `action` varchar(20) NOT NULL, `reward_activity` int(11) NOT NULL DEFAULT 0, `reward_activity_points` int(11) NOT NULL DEFAULT 0, `timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), KEY `account_id` (`account_id`), KEY `char_name` (`char_name`), KEY `action` (`action`), KEY `timestamp` (`timestamp`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+	query_sql("CREATE TABLE IF NOT EXISTS `antibog_activity_log` (`id` int(11) NOT NULL AUTO_INCREMENT, `account_id` int(11) NOT NULL, `char_name` varchar(32) NOT NULL, `action` varchar(20) NOT NULL, `result` varchar(20) NOT NULL, `timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), KEY `account_id` (`account_id`), KEY `char_name` (`char_name`), KEY `action` (`action`), KEY `result` (`result`), KEY `timestamp` (`timestamp`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+	query_sql("CREATE TABLE IF NOT EXISTS `activity_reward_gm` (`id` int(11) NOT NULL AUTO_INCREMENT, `account_id` int(11) NOT NULL, `registered` tinyint(1) NOT NULL DEFAULT 0, `start_time` bigint(20) NOT NULL DEFAULT 0, `last_activity` bigint(20) NOT NULL DEFAULT 0, `gm_modify` int(11) NOT NULL DEFAULT 0, `gm_reset` tinyint(1) NOT NULL DEFAULT 0, `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `account_id` (`account_id`), KEY `registered` (`registered`), KEY `start_time` (`start_time`), KEY `last_activity` (`last_activity`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 	
-	// Bind the @hourlyrewards command to this NPC
-	bindatcmd "hourlyrewards", strnpcinfo(3)+"::OnCommand";
+	// Bind the @activityrewards command to this NPC
+	bindatcmd "activityrewards", strnpcinfo(3)+"::OnCommand";
 	end;
 	
 OnCommand:
@@ -636,7 +750,7 @@ OnCommand:
 	// Check for GM modifications to this player's timer
 	.@gm_modify = 0;
 	.@gm_reset = 0;
-	.@rows = query_sql("SELECT `gm_modify`, `gm_reset` FROM `hourly_reward_gm` WHERE `account_id` = " + .@account_id, .@gm_modify, .@gm_reset);
+	.@rows = query_sql("SELECT `gm_modify`, `gm_reset` FROM `activity_reward_gm` WHERE `account_id` = " + .@account_id, .@gm_modify, .@gm_reset);
 	if (.@rows > 0) {
 		.@gm_modify = .@gm_modify;
 		.@gm_reset = .@gm_reset;
@@ -645,25 +759,25 @@ OnCommand:
 	// Apply GM modifications if any
 	if (.@gm_reset == 1) {
 		// GM reset this player's timer
-		#hourly_registered = 0;
-		#hourly_start_time = 0;
-		#hourly_last_activity = 0;
+		#activity_registered = 0;
+		#activity_start_time = 0;
+		#last_activity = 0;
 		// Clear the GM reset flag
-		query_sql("UPDATE `hourly_reward_gm` SET `gm_reset` = 0 WHERE `account_id` = " + .@account_id);
+		query_sql("UPDATE `activity_reward_gm` SET `gm_reset` = 0 WHERE `account_id` = " + .@account_id);
 	} else if (.@gm_modify != 0) {
 		// GM modified this player's timer
-		if (#hourly_registered == 1) {
+		if (#activity_registered == 1) {
 			// Apply the modification to start time (subtract to increase elapsed time)
-			#hourly_start_time = #hourly_start_time - .@gm_modify;
+			#activity_start_time = #activity_start_time - .@gm_modify;
 		}
 		// Clear the GM modify flag
-		query_sql("UPDATE `hourly_reward_gm` SET `gm_modify` = 0 WHERE `account_id` = " + .@account_id);
+		query_sql("UPDATE `activity_reward_gm` SET `gm_modify` = 0 WHERE `account_id` = " + .@account_id);
 	}
 	
 	// Note: Command usage does NOT reset AFK timer - only real activity counts
 	
 	// Check if GM modification was applied and notify player
-	if (.@gm_modify != 0 && #hourly_registered == 1) {
+	if (.@gm_modify != 0 && #activity_registered == 1) {
 		if (.@gm_modify > 0) {
 			dispbottom "^00AA00[GM MODIFICATION]^000000: Your timer has been increased by " + (.@gm_modify / 60) + " minutes.";
 		} else {
@@ -672,29 +786,29 @@ OnCommand:
 	}
 	
 	// Check if registration has reset (new day)
-	if (#hourly_registered_date != .@current_date) {
-		#hourly_registered = 0;
-		#hourly_start_time = 0;
-		#hourly_last_activity = 0;
-		#hourly_registered_date = .@current_date;
+	if (#activity_registered_date != .@current_date) {
+		#activity_registered = 0;
+		#activity_start_time = 0;
+		#last_activity = 0;
+		#activity_registered_date = .@current_date;
 	}
 	
 	// Check if player is registered
-	if (#hourly_registered == 0) {
-		dispbottom "You are not registered for hourly rewards.";
-		dispbottom "Visit the Hourly Rewards NPC to register.";
+	if (#activity_registered == 0) {
+		dispbottom "You are not registered for activity points.";
+		dispbottom "Visit the Activity Points NPC to register.";
 		end;
 	}
 	
 	// Calculate time information
-	.@time_elapsed = .@current_time - #hourly_start_time;
-	.@time_since_last_activity = .@current_time - #hourly_last_activity;
+	.@time_elapsed = .@current_time - #activity_start_time;
+	.@time_since_last_activity = .@current_time - #last_activity;
 	.@time_remaining = 3600 - .@time_elapsed;
 	
 	// Check if player has been AFK for more than 15 minutes
 	if (.@time_since_last_activity > 900) {
 		dispbottom "^FF0000TIMER RESET: You have been AFK for " + (.@time_since_last_activity / 60) + " minutes!^000000";
-		dispbottom "^FF0000Your hourly timer has been reset.^000000";
+		dispbottom "^FF0000Your activity timer has been reset.^000000";
 		dispbottom " ";
 		dispbottom "Current status: ^FF0000Timer Reset^000000";
 		dispbottom "Time since last activity: ^FF0000" + (.@time_since_last_activity / 60) + " minutes^000000";
@@ -702,15 +816,15 @@ OnCommand:
 		dispbottom "You need to register again to start earning rewards.";
 		
 		// Reset registration status so player needs to register again
-		#hourly_registered = 0;
-		#hourly_start_time = 0;
-		#hourly_last_activity = 0;
+		#activity_registered = 0;
+		#activity_start_time = 0;
+		#last_activity = 0;
 		
 		// Update database to reflect reset status
-		query_sql("INSERT INTO `hourly_reward_gm` (`account_id`, `registered`, `start_time`, `last_activity`) VALUES (" + .@account_id + ", 0, 0, 0) ON DUPLICATE KEY UPDATE `registered` = 0, `start_time` = 0, `last_activity` = 0");
+		query_sql("INSERT INTO `activity_reward_gm` (`account_id`, `registered`, `start_time`, `last_activity`) VALUES (" + .@account_id + ", 0, 0, 0) ON DUPLICATE KEY UPDATE `registered` = 0, `start_time` = 0, `last_activity` = 0");
 		
 		// Log AFK reset (command usage)
-		query_sql("INSERT INTO `hourly_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity_points`, `reward_hourly_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'afk_reset_cmd', 0, 0)");
+		query_sql("INSERT INTO `activity_rewards_log` (`account_id`, `char_name`, `action`, `reward_activity`, `reward_activity_points`) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'afk_reset_cmd', 0, 0)");
 		end;
 	}
 	
@@ -722,22 +836,41 @@ OnCommand:
 		dispbottom "Time remaining until reset: ^FF0000" + (900 - .@time_since_last_activity) / 60 + " minutes^000000";
 		dispbottom " ";
 		dispbottom "^00AA00 AFK Prevention:^000000";
-		dispbottom "Visit the Hourly Rewards NPC and choose 'Continue Timer'!";
+		dispbottom "Visit the Activity Points NPC and choose 'Continue Timer'!";
 		dispbottom " ";
-		dispbottom "Use @hourlyrewards anytime to check your status!";
+		dispbottom "Use @activityrewards anytime to check your status!";
 		end;
 	}
 	
 	// Check if player can claim reward
 	if (.@time_elapsed >= 3600) {
-		dispbottom "Status: ^00AA00Ready to Claim!^000000";
-		dispbottom " ";
-		dispbottom "You have been active for 1 hour.";
-		dispbottom "Visit the Hourly Rewards NPC to claim your reward.";
-		dispbottom " ";
-		dispbottom "Rewards:";
-		dispbottom "^00AA00• 2 Activity Points^000000";
-		dispbottom "^00AA00• 100 Hourly Points^000000";
+		// CLAIM VERIFICATION: Check if already claimed recently (within 1 hour)
+		.@last_claim_time = 0;
+		.@last_claim_rows = query_sql("SELECT UNIX_TIMESTAMP(MAX(timestamp)) FROM activity_rewards_log WHERE account_id = " + .@account_id + " AND action = 'claim_reward'", .@last_claim_time);
+		
+		// If player has claimed within the last hour, show cooldown message
+		if (.@last_claim_rows > 0 && .@last_claim_time > 0 && (.@last_claim_time + 3600) > .@current_time) {
+			.@time_since_last_claim = .@current_time - .@last_claim_time;
+			.@minutes_since_last_claim = .@time_since_last_claim / 60;
+			.@minutes_until_next_claim = (3600 - .@time_since_last_claim) / 60;
+			
+			dispbottom "Status: ^FF0000Claim Cooldown Active^000000";
+			dispbottom " ";
+			dispbottom "You have already claimed a reward recently!";
+			dispbottom "Time since last claim: ^FF0000" + .@minutes_since_last_claim + " minutes^000000";
+			dispbottom "Time until next claim: ^00AA00" + .@minutes_until_next_claim + " minutes^000000";
+			dispbottom " ";
+			dispbottom "You must wait at least 1 hour between claims.";
+			end;
+		} else {
+			dispbottom "Status: ^00AA00Ready to Claim!^000000";
+			dispbottom " ";
+			dispbottom "You have been active for 1 hour.";
+			dispbottom "Visit the Activity Points NPC to claim your reward.";
+			dispbottom " ";
+			dispbottom "Rewards:";
+			dispbottom "^00AA00• 2 Activity Points^000000";
+		}
 		end;
 	}
 	
@@ -754,40 +887,39 @@ OnCommand:
 	dispbottom " ";
 	dispbottom "Stay active! Your timer will reset if you go AFK for 15+ minutes.";
 	dispbottom " ";
-	dispbottom "^00AA00 Tip:^000000 Use @hourlyrewards to check AFK status, then talk to NPC to continue timer!";
+	dispbottom "^00AA00 Tip:^000000 Use @activityrewards to check AFK status, then talk to NPC to continue timer!";
 	dispbottom " ";
 	dispbottom "Rewards when complete:";
 	dispbottom "^00AA00• 2 Activity Points^000000";
-	dispbottom "^00AA00• 100 Hourly Points^000000";
 	end;
 	
 // Enhanced AFK Detection Events (using real rAthena functions)
 OnNPCKillEvent:
 	// Track combat as activity (when player kills monsters)
 	.@account_id = getcharid(3);
-	if (#hourly_registered == 1) {
-		#hourly_last_activity = gettimetick(2);
+	if (#activity_registered == 1) {
+		#last_activity = gettimetick(2);
 	}
 	end;
 	
 OnPCLoginEvent:
 	// Check if player is autovending/autotrading and consider as AFK
 	.@account_id = getcharid(3);
-	if (#hourly_registered == 1) {
+	if (#activity_registered == 1) {
 		// Check if player is autovending
 		if (checkvending(strcharinfo(0)) == 1) {
 			// Player is autovending - consider as AFK
-			#hourly_last_activity = 0; // Reset activity to force AFK detection
+			#last_activity = 0; // Reset activity to force AFK detection
 		}
 		// Check if player is in chatroom
 		if (checkchatting(strcharinfo(0)) == 1) {
 			// Player is in chatroom - consider as AFK
-			#hourly_last_activity = 0; // Reset activity to force AFK detection
+			#last_activity = 0; // Reset activity to force AFK detection
 		}
 		// Check if player has been idle for too long (15 minutes)
 		if (checkidle(strcharinfo(0)) > 900) {
 			// Player has been idle for more than 15 minutes - consider as AFK
-			#hourly_last_activity = 0; // Reset activity to force AFK detection
+			#last_activity = 0; // Reset activity to force AFK detection
 		}
 	}
 	end;
@@ -795,8 +927,6 @@ OnPCLoginEvent:
 OnPCLogoutEvent:
 	// Handle logout - could reset activity if needed
 	.@account_id = getcharid(3);
-	// Optionally reset activity on logout
-	// $@hourly_last_activity[.@account_id] = 0;
 	end;
 	
 }
@@ -958,8 +1088,8 @@ function	script	VerifyHumanPlayer	{
 			$@antibot_last_verify[.@account_id] = gettimetick(2) + 300;
 			$@antibot_verifying[.@account_id] = 0;
 			
-			// Log successful verification
-			query_sql("INSERT INTO antibot_log (account_id, char_name, action, result, timestamp) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'verification', 'success', NOW())");
+					// Log successful verification
+		query_sql("INSERT INTO antibog_activity_log (account_id, char_name, action, result, timestamp) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'verification', 'success', NOW())");
 			cutin "clear", 2;
 			return 1;
 		} else {
@@ -974,8 +1104,8 @@ function	script	VerifyHumanPlayer	{
 			mes "this is an error.";
 			
 			
-			// Log failed verification
-			query_sql("INSERT INTO antibot_log (account_id, char_name, action, result, timestamp) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'verification', 'failed', NOW())");
+					// Log failed verification
+		query_sql("INSERT INTO antibog_activity_log (account_id, char_name, action, result, timestamp) VALUES (" + .@account_id + ", '" + escape_sql(strcharinfo(0)) + "', 'verification', 'failed', NOW())");
 			
 			$@antibot_verifying[.@account_id] = 0;
 			cutin "clear", 2;
