@@ -1,0 +1,103 @@
+prontera,150,150,3	script	Anti-Bot System::AntiBot	4_F_KAFRA1,{
+	// Anti-Bot System NPC
+	// This NPC helps verify that players are human by showing them a monster and asking for its name
+	
+	.@npcname$ = "^FF0000 Anti-Bot System ^000000";
+	.@header$ = "[^0000ff" + .@npcname$ + "^000000]";
+	
+	// Check if player is already being verified
+	if ($@antibot_verifying[getcharid(3)] == 1) {
+		mes .@header$;
+		mes "You are already being verified.";
+		mes "Please complete the current verification first.";
+		close;
+	}
+	
+	// Check if player has been verified recently (within 5 minutes)
+	if ($@antibot_last_verify[getcharid(3)] > gettimetick(2)) {
+		mes .@header$;
+		mes "You have been verified recently.";
+		mes "Please wait a few minutes before trying again.";
+		close;
+	}
+	
+	// Set of monsters for verification (you can add more)
+	.@monsters$[0] = "STROUF";
+	.@monsters$[1] = "PORING";
+	.@monsters$[2] = "DROPS";
+	.@monsters$[3] = "PICKY";
+	.@monsters$[4] = "FABRE";
+	.@monsters$[5] = "LUNATIC";
+	.@monsters$[6] = "POPORING";
+	.@monsters$[7] = "MARIN";
+	.@monsters$[8] = "SANDMAN";
+	.@monsters$[9] = "HORNET";
+	.@monsters$[10] = "FARMILIAR";
+	.@monsters$[11] = "CRUSADER";
+	.@monsters$[12] = "KNIGHT";
+	.@monsters$[13] = "PRIEST";
+	.@monsters$[14] = "WIZARD";
+	
+	// Select a random monster
+	.@monster_index = rand(15);
+	.@correct_answer$ = .@monsters$[.@monster_index];
+	
+	// Store the correct answer for this player
+	$@antibot_answer[getcharid(3)] = .@correct_answer$;
+	$@antibot_verifying[getcharid(3)] = 1;
+	
+	mes .@header$;
+	mes "This account is";
+	mes "suspected as a bot-user.";
+	mes "Enter the ^ff0000NAME OF THE MONSTER^000000 you";
+	mes "see on your screen.";
+	next;
+	
+	// Display the monster (you can customize this based on your server's monster display system)
+	mes .@header$;
+	mes "Monster Name: ^00ff00" + .@correct_answer$ + "^000000";
+	mes " ";
+	mes "Please type the monster name exactly as shown above.";
+	next;
+	
+	input .@player_answer$;
+	
+	// Check if answer is correct (case-insensitive)
+	if (compare(.@player_answer$, .@correct_answer$) == 0) {
+		// Correct answer
+		mes .@header$;
+		mes "Verification successful!";
+		mes "You have been verified as a human player.";
+		mes " ";
+		mes "You can now continue playing normally.";
+		
+		// Set verification timestamp (5 minutes from now)
+		$@antibot_last_verify[getcharid(3)] = gettimetick(2) + 300;
+		$@antibot_verifying[getcharid(3)] = 0;
+		
+		// Log successful verification
+		query_sql("INSERT INTO antibot_log (account_id, char_name, action, result, timestamp) VALUES (" + getcharid(3) + ", '" + escape_sql(strcharinfo(0)) + "', 'verification', 'success', NOW())");
+		
+		close;
+	} else {
+		// Wrong answer
+		mes .@header$;
+		mes "Verification failed!";
+		mes "The correct answer was: ^00ff00" + .@correct_answer$ + "^000000";
+		mes "Your answer was: ^ff0000" + .@player_answer$ + "^000000";
+		mes " ";
+		mes "Please try again or contact a GM if you believe";
+		mes "this is an error.";
+		
+		// Log failed verification
+		query_sql("INSERT INTO antibot_log (account_id, char_name, action, result, timestamp) VALUES (" + getcharid(3) + ", '" + escape_sql(strcharinfo(0)) + "', 'verification', 'failed', NOW())");
+		
+		$@antibot_verifying[getcharid(3)] = 0;
+		close;
+	}
+	
+OnInit:
+	// Create antibot_log table if it doesn't exist
+	query_sql("CREATE TABLE IF NOT EXISTS `antibot_log` (`id` int(11) NOT NULL AUTO_INCREMENT, `account_id` int(11) NOT NULL, `char_name` varchar(32) NOT NULL, `action` varchar(20) NOT NULL, `result` varchar(20) NOT NULL, `timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), KEY `account_id` (`account_id`), KEY `char_name` (`char_name`), KEY `action` (`action`), KEY `result` (`result`), KEY `timestamp` (`timestamp`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+	end;
+} 

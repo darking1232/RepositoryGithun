@@ -1,0 +1,370 @@
+prontera,187,210,3	script	Broadcaster#1::BC	894,{
+	// Create broadcast_log table if it doesn't exist
+	query_sql("CREATE TABLE IF NOT EXISTS `broadcast_log` (`id` int(11) NOT NULL AUTO_INCREMENT, `account_id` int(11) NOT NULL, `char_name` varchar(32) NOT NULL, `message` text NOT NULL, `broadcast_type` enum('manual','auto') NOT NULL DEFAULT 'manual', `cost` int(11) NOT NULL DEFAULT 0, `timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), KEY `account_id` (`account_id`), KEY `char_name` (`char_name`), KEY `broadcast_type` (`broadcast_type`), KEY `timestamp` (`timestamp`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+	
+	// Variable declarations
+	.broadcastfee = 1000000;
+	.auto_broadcastfee = 1000000;
+	
+	.@npcname$ = "^FF9300 Broadcaster ^000000";
+	.@header$ = "[^0000ff" + .@npcname$ + "^000000]";
+
+	// Check if WoE is active
+	if (agitcheck() || agitcheck2()) {
+		mes .@header$;
+		mes "Sorry, the broadcaster is unavailable";
+		mes "during War of Emperium.";
+		mes "Please try again after WoE ends.";
+		close;
+	}
+
+	mes .@header$;
+	mes "What's up?, I am the Broadcaster";
+	mes "for ReviseRO!";
+	mes "I can broadcast a message for you.";
+	mes " ";
+	mes " ";
+	mes "Note: ^ff0000Strictly ENGLISH only when^000000";
+	mes "using the broadcaster.";
+	mes " ";
+	mes "It costs ^ff0000" + .broadcastfee + "^000000 zeny.";
+	next;
+	mes .@header$;
+	mes "Would you like to Broadcast?";
+	next;
+	
+	switch (select("Yes:Nevermind:Auto-broadcast:")) {
+		case 1:
+			if (Broadcast > gettimetick(2)) {
+				mes .@header$;
+				mes "Sorry you have to wait for 1 min.";
+				close;
+			}
+			
+			if (Zeny < .broadcastfee) {
+				goto L_NotEnoughZeny;
+			}
+			
+			mes .@header$;
+			mes "Please input your message.";
+			next;
+			input .@broadcast$;
+			
+			// Check if message is empty or too long
+			if (.@broadcast$ == "" || .@broadcast$ == " ") {
+				mes .@header$;
+				mes "Message cannot be empty.";
+				close;
+			}
+			
+			// Check message length
+			if (getstrlen(.@broadcast$) > 100) {
+				mes .@header$;
+				mes "Message cannot be longer than 100 characters.";
+				close;
+			}
+			
+			// Final zeny check before deduction (exploit prevention)
+			if (Zeny < .broadcastfee) {
+				goto L_NotEnoughZeny;
+			}
+			
+			// Deduct zeny first, then broadcast
+			Zeny -= .broadcastfee;
+			
+			// Log the broadcast to database
+			query_sql("INSERT INTO broadcast_log (account_id, char_name, message, broadcast_type, cost, timestamp) VALUES (" + getcharid(3) + ", '" + escape_sql(strcharinfo(0)) + "', '" + escape_sql(.@broadcast$) + "', 'manual', " + .broadcastfee + ", NOW())");
+			
+			announce " [ Broadcast ] " + strcharinfo(0) + ": " + .@broadcast$ + "", 0, 0x5AFF00; // Edit 5AFF00 for color code HTML Color Code
+			Broadcast = gettimetick(2) + 60; //Timer 60 = 1 minute/s
+			dispbottom "Broadcaster: Please wait for 1min until next broadcast to avoid flooding.";
+			end;
+		case 2:
+			mes .@header$;
+			mes "Suit yourself.";
+			close;
+		case 3:
+			mes .@header$;
+			mes "Hi, I can automatically broadcast messages for you!";
+			mes "It will cost you ^ff0000" + .auto_broadcastfee + "^000000 zeny per broadcast.";
+			next;
+			
+			.@aid = getcharid(3);
+			
+			switch(select("Proceed:Check status:Exit")) {
+				case 1:
+					if ($bc_announces_repeat[.@aid] > 0) {
+						mes .@header$;
+						mes "You already have an auto announce for this account.";
+						close;
+					}
+					
+					mes .@header$;
+					mes "Please input your message.";
+					next;
+					input .@broadcast$;
+					
+					// Check if message is empty or too long
+					if (.@broadcast$ == "" || .@broadcast$ == " ") {
+						mes .@header$;
+						mes "Message cannot be empty.";
+						close;
+					}
+					
+					// Check message length
+					if (getstrlen(.@broadcast$) > 100) {
+						mes .@header$;
+						mes "Message cannot be longer than 100 characters.";
+						close;
+					}
+					
+					mes .@header$;
+					mes "How many times do you want to broadcast?";
+					mes "Min: 1";
+					mes "Max: 100";
+					next;
+					input .@repeat, 1, 100;
+					
+					if (.@repeat < 1 || .@repeat > 100) {
+						mes .@header$;
+						mes "Invalid number of repeats.";
+						close;
+					}
+					
+					.@delay = 360; // Default 6 minutes (360 seconds) for regular accounts
+					
+					// Check if account is VIP (you can modify this condition based on your VIP system)
+					// Example: Check if account has VIP status in account table or specific group_id
+					if (getgroupid() >= 5) { // VIP group_id is 5
+						.@delay = 240; // 4 minutes (240 seconds) for VIP accounts
+					}
+					
+					//mes .@header$;
+					//mes "Delay between announces?";
+					//mes "Min: 6";
+					//mes "Max: 20";
+					//next;
+					//input .@delay, 6, 20;
+					//
+					//if (.@delay < 6 || .@delay > 20) {
+					//	mes .@header$;
+					//	mes "Suit yourself.";
+					//	close;
+					//}
+					
+					.@cost = .auto_broadcastfee * .@repeat;
+					
+					// Display appropriate message based on VIP status
+					if (getgroupid() == 5) {
+						mes .@header$;
+						mes "You want to broadcast:";
+						mes "^ff0000" + .@broadcast$ + "^000000";
+						mes "^00ff00[VIP]^000000 Every 4 minutes for ^00ff00" + .@repeat + "^000000 time(s)?";
+						mes "It will cost you a total of ^ff0000" + .@cost + "^000000 zeny.";
+					} else {
+						mes .@header$;
+						mes "You want to broadcast:";
+						mes "^ff0000" + .@broadcast$ + "^000000";
+						mes "Every 6 minutes for ^00ff00" + .@repeat + "^000000 time(s)?";
+						mes "It will cost you a total of ^ff0000" + .@cost + "^000000 zeny.";
+					}
+					next;
+					
+					switch(select("Proceed:Cancel")) {
+						case 2:
+							mes .@header$;
+							mes "Suit yourself.";
+							close;
+					}
+					
+					// Final zeny check before deduction (exploit prevention)
+					if (Zeny < .@cost) {
+						goto L_NotEnoughZeny;
+					}
+					
+					// Deduct zeny first, then setup auto-broadcast
+					Zeny -= .@cost;
+					
+					// Setup auto-broadcast variables
+					$bc_announces_repeat[.@aid] = .@repeat;
+					$bc_announces_delay[.@aid] = .@delay; // Changed to seconds for testing
+					
+					// Set broadcast message with VIP identification
+					if (getgroupid() == 5) {
+						$bc_announces_mes$[.@aid] = " [ VIP Broadcast ] " + strcharinfo(0) + ": " + .@broadcast$;
+					} else {
+						$bc_announces_mes$[.@aid] = " [ Broadcast ] " + strcharinfo(0) + ": " + .@broadcast$;
+					}
+					
+					$bc_announces_char$[.@aid] = strcharinfo(0); // Store character name
+					$bc_announces_next_time[.@aid] = gettimetick(2) + $bc_announces_delay[.@aid]; // Store next broadcast time
+					$bc_announces_aid2idx[.@aid] = $bc_announces_count;
+					$bc_announces_idx2aid[$bc_announces_count] = .@aid;
+					$bc_announces_count++;
+					
+					// Start the first broadcast immediately
+					callsub L_ProcessAutoAnnounce;
+					
+					mes .@header$;
+					mes "Auto-broadcast started successfully!";
+					close;
+				case 2:
+					if ($bc_announces_repeat[.@aid] == 0) {
+						mes .@header$;
+						mes "You currently have no auto announces.";
+						close;
+					}
+					
+					mes .@header$;
+					mes "Your current announce is as follow:";
+					mes "^ff0000" + $bc_announces_mes$[.@aid] + "^000000";
+					mes "It will repeat " + $bc_announces_repeat[.@aid] + " more time(s).";
+					
+					// Calculate remaining time
+					.@remaining = $bc_announces_next_time[.@aid] - gettimetick(2);
+					if (.@remaining < 0) .@remaining = 0;
+					mes "Next broadcast will be in " + .@remaining + " seconds.";
+					next;
+					
+					switch(select("Okay:Cancel announce:")) {
+						case 1:	
+							mes .@header$;
+							mes "...";
+							close;
+						case 2:
+							mes .@header$;
+							mes "Your zeny will not be refunded, are you sure you want to cancel?";
+							next;
+							
+							switch(select("No:Yes")) {
+								case 1:
+									mes .@header$;
+									mes "Suit yourself.";
+									close;
+							}
+							
+							if ($bc_announces_repeat[.@aid] == 0) {	// It already ended?
+								end;
+							}
+							
+							callsub L_RemoveAutoAnnounce, .@aid;
+							mes .@header$;
+							mes "All done.";
+							close;
+					}
+					
+					end;
+				case 3:
+					mes .@header$;
+					mes "Suit yourself.";
+					close;
+			}
+			
+			close;
+	}
+	
+	end;
+L_NotEnoughZeny:
+	mes .@header$;
+	mes "You don't have enough zeny.";
+	close;
+L_ProcessAutoAnnounce:
+	// Process all active auto-announces
+	for (.@i = 0; .@i < $bc_announces_count; .@i++) {
+		.@aid = $bc_announces_idx2aid[.@i];
+		
+		// Skip if this account has no active auto-announce
+		if ($bc_announces_repeat[.@aid] <= 0) {
+			continue;
+		}
+		
+		// Check if it's time for this account's next broadcast
+		if (gettimetick(2) >= $bc_announces_next_time[.@aid]) {
+			// Log the auto-broadcast to database
+			query_sql("INSERT INTO broadcast_log (account_id, char_name, message, broadcast_type, cost, timestamp) VALUES (" + .@aid + ", '" + escape_sql($bc_announces_char$[.@aid]) + "', '" + escape_sql($bc_announces_mes$[.@aid]) + "', 'auto', " + .auto_broadcastfee + ", NOW())");
+			
+			announce $bc_announces_mes$[.@aid], 0, 0x5AFF00;
+			
+			$bc_announces_repeat[.@aid]--;
+			
+			if ($bc_announces_repeat[.@aid] <= 0) {
+				callsub L_RemoveAutoAnnounce, .@aid;
+			} else {
+				// Update next broadcast time
+				$bc_announces_next_time[.@aid] = gettimetick(2) + $bc_announces_delay[.@aid];
+			}
+		}
+	}
+	
+	// Schedule next check if there are still active auto-announces
+	if ($bc_announces_count > 0) {
+		initnpctimer;
+	}
+	
+	return;
+L_RemoveAutoAnnounce:
+	.@aid = getarg(0);
+	.@idx = $bc_announces_aid2idx[.@aid];
+	
+	// Safety check
+	if (.@idx >= $bc_announces_count) {
+		return;
+	}
+	
+	$bc_announces_repeat[.@aid] = 0;
+	$bc_announces_delay[.@aid] = 0;
+	$bc_announces_mes$[.@aid] = "";
+	$bc_announces_char$[.@aid] = "";
+	$bc_announces_next_time[.@aid] = 0;
+	
+	.@last_aid = $bc_announces_idx2aid[$bc_announces_count - 1];
+	$bc_announces_idx2aid[.@idx] = .@last_aid;
+	$bc_announces_idx2aid[$bc_announces_count - 1] = 0;
+	$bc_announces_aid2idx[.@last_aid] = .@idx;
+	$bc_announces_count--;
+	return;
+	
+	// Initialize global variables if not already set
+	if ($bc_announces_count == 0) {
+		$bc_announces_count = 0;
+	}
+	
+OnInit:
+	waitingroom "Broadcaster",0;
+	end;
+	
+OnTimer1000:
+	// Process all active auto-announces
+	for (.@i = 0; .@i < $bc_announces_count; .@i++) {
+		.@aid = $bc_announces_idx2aid[.@i];
+		
+		// Skip if this account has no active auto-announce
+		if ($bc_announces_repeat[.@aid] <= 0) {
+			continue;
+		}
+		
+		// Check if it's time for this account's next broadcast
+		if (gettimetick(2) >= $bc_announces_next_time[.@aid]) {
+			// Log the auto-broadcast to database
+			query_sql("INSERT INTO broadcast_log (account_id, char_name, message, broadcast_type, cost, timestamp) VALUES (" + .@aid + ", '" + escape_sql($bc_announces_char$[.@aid]) + "', '" + escape_sql($bc_announces_mes$[.@aid]) + "', 'auto', " + .auto_broadcastfee + ", NOW())");
+			
+			announce $bc_announces_mes$[.@aid], 0, 0x5AFF00;
+			
+			$bc_announces_repeat[.@aid]--;
+			
+			if ($bc_announces_repeat[.@aid] <= 0) {
+				callsub L_RemoveAutoAnnounce, .@aid;
+			} else {
+				// Update next broadcast time
+				$bc_announces_next_time[.@aid] = gettimetick(2) + $bc_announces_delay[.@aid];
+			}
+		}
+	}
+	
+	// Continue timer if there are still active auto-announces
+	if ($bc_announces_count > 0) {
+		initnpctimer;
+	}
+	
+	end;
+}
