@@ -365,7 +365,7 @@ close;
 case 2:
 	next;
 	mes "[^880000Arena Master^000000]";
-	mes "You current Arena Points is "+getd("#arena_points_"+getcharid(3));
+	mes "You current Arena Points is "+#monster_arena_points;
 	next;
 	goto strt;
 break;
@@ -377,7 +377,7 @@ case 3:
 	mes "Welcome to the Arena Item Shop!";
 	mes "Here you can purchase items using your Arena Points.";
 	mes " ";
-	mes "Your current Arena Points: ^008800"+getd("#arena_points_"+getcharid(3))+"^000000";
+	mes "Your current Arena Points: ^008800"+#monster_arena_points+"^000000";
 	mes " ";
 	mes "Opening Arena Points Shop...";
 	close2;
@@ -387,6 +387,10 @@ break;
 
 //==========================================information==============================================
 case 4:
+next;
+mes "[^880000Arena Master^000000]";
+mes "Type @monsterarenatimer";
+mes "For more information";
 next;
 mes "[^880000Arena Master^000000]";
 mes "Monsters Inside The Room:";
@@ -516,7 +520,7 @@ case 5:
 	} else {
 		mes "IP Cooldown Status: None";
 	}
-	mes "Arena Points: "+getd("#arena_points_"+.@target_account);
+	mes "Arena Points: "+#monster_arena_points;
 	mes " ";
 	
 	switch(select("Reset Timer:Remove Time:Add Time:Set Specific Time:Pause/Resume Timer:Full Reset:Cool Down Reset:Unlimited Access Reset:View Violations:Cancel")){
@@ -999,7 +1003,7 @@ OnPCLogoutEvent:
 		
 		// Display current farming time (preserve existing time)
 		set .@remaining_total, 14400 - getd("#arena_farming_time_"+getcharid(3));
-		dispbottom "^FF8800[Arena Points: "+F_InsertComma1(getd("#arena_points_"+getcharid(3)))+"]^000000 ^00FF00[Farming Time: "+callfunc("t",getd("#arena_farming_time_"+getcharid(3)))+"]^000000 ^FF0000[Remaining: "+callfunc("t",.@remaining_total)+"]^000000";
+		dispbottom "^FF8800[Arena Points: "+#monster_arena_points+"]^000000 ^00FF00[Farming Time: "+callfunc("t",getd("#arena_farming_time_"+getcharid(3)))+"]^000000 ^FF0000[Remaining: "+callfunc("t",.@remaining_total)+"]^000000";
 		
 		// Mark timer as running for this account
 		setd "#arena_timer_running_"+getcharid(3), 1;
@@ -1205,10 +1209,6 @@ function	script	arena_grant_access	{
 	setd "#arena_access_"+.@account_id, 1;
 	setd "#arena_char_name_"+.@account_id, .@char_name$;
 	
-	// Initialize arena points if not set
-	// Only initialize if variable doesn't exist (not when it's 0)
-	.@arena_points = getd("#arena_points_"+.@account_id);
-
 	
 	// ACCOUNT-BASED: Initialize farming time for this account if not set
 	// Only initialize if variable doesn't exist (not when it's 0)
@@ -1315,9 +1315,8 @@ function	script	t	{
    OnKill:
 	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 50;
-		.@aid = getcharid(3);
-		callfunc "arena_add_points", .@aid, .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
+		set #monster_arena_points, #monster_arena_points+.@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+#monster_arena_points+" Arena Points now.";
 	}
 	end;
 }
@@ -1326,9 +1325,8 @@ function	script	t	{
    OnKill:
 	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 50;
-		.@aid = getcharid(3);
-		callfunc "arena_add_points", .@aid, .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
+		set #monster_arena_points, #monster_arena_points+.@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+#monster_arena_points+" Arena Points now.";
 	}
 	end;
 }
@@ -1337,9 +1335,8 @@ function	script	t	{
    OnKill:
 	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 100;
-		.@aid = getcharid(3);
-		callfunc "arena_add_points", .@aid, .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
+		set #monster_arena_points, #monster_arena_points+.@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+#monster_arena_points+" Arena Points now.";
 	}
 	end;
 }
@@ -1348,9 +1345,8 @@ function	script	t	{
    OnKill:
 	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 50;
-		.@aid = getcharid(3);
-		callfunc "arena_add_points", .@aid, .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
+		set #monster_arena_points, #monster_arena_points+.@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+#monster_arena_points+" Arena Points now.";
 	}
 	end;
 }
@@ -1359,9 +1355,8 @@ function	script	t	{
    OnKill:
 	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 50;
-		.@aid = getcharid(3);
-		callfunc "arena_add_points", .@aid, .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
+		set #monster_arena_points, #monster_arena_points+.@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+#monster_arena_points+" Arena Points now.";
 	}
 	end;
 }
@@ -1370,9 +1365,8 @@ function	script	t	{
    OnKill:
 	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 4;
-		.@aid = getcharid(3);
-		callfunc "arena_add_points", .@aid, .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
+		set #monster_arena_points, #monster_arena_points+.@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+#monster_arena_points+" Arena Points now.";
 	}
 	end;
 }
@@ -1381,9 +1375,8 @@ function	script	t	{
    OnKill:
 	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 4;
-		.@aid = getcharid(3);
-		callfunc "arena_add_points", .@aid, .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
+		set #monster_arena_points, #monster_arena_points+.@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+#monster_arena_points+" Arena Points now.";
 	}
 	end;
 }
@@ -1392,9 +1385,8 @@ function	script	t	{
    OnKill:
 	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 4;
-		.@aid = getcharid(3);
-		callfunc "arena_add_points", .@aid, .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
+		set #monster_arena_points, #monster_arena_points+.@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+#monster_arena_points+" Arena Points now.";
 	}
 	end;
 }
@@ -1403,9 +1395,8 @@ function	script	t	{
    OnKill:
 	if (strcharinfo(3) == "bat_b02" && getd("#arena_access_"+getcharid(3)) == 1){
 		.@point = 20;
-		.@aid = getcharid(3);
-		callfunc "arena_add_points", .@aid, .@point;
-		dispbottom "Gained "+.@point+" Arena Points. You got "+F_InsertComma1(getd("#arena_points_"+.@aid))+" Arena Points now.";
+		set #monster_arena_points, #monster_arena_points+.@point;
+		dispbottom "Gained "+.@point+" Arena Points. You got "+#monster_arena_points+" Arena Points now.";
 	}
 	end;
 }
@@ -1538,7 +1529,7 @@ bat_b02,389,2,0	warp	retransfer	1,1,bat_b02,0,0
 bat_b02,17,290,0	warp	retransfer1	1,1,bat_b02,0,0
 
 //==========================================arena points shop==============================================
--	pointshop	arena_points_shop	-1,getd("#arena_points_"+getcharid(3)),14512:1000,12219:2000
+-	pointshop	arena_points_shop	-1,#monster_arena_points,14512:1000,12219:2000
 
 //==========================================MONSTER ARENA TIMER COMMAND==============================================
 -	script	monster_arena_timer_cmd	-1,{
