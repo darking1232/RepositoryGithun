@@ -1,4 +1,4 @@
-prontera,164,188,3	script	Activity Points::ActivityRewards	4_F_KAFRA1,{
+prontera,164,188,3	script	Activity Points::ActivityRewards	117,{
 	// Activity Points System NPC
 	// Players register, stay active for 1 hour, then claim rewards
 	

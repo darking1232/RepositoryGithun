@@ -1,0 +1,436 @@
+//===== rAthena Script =======================================
+//= Multi-Point Shop System
+//===== By: ==================================================
+//= AI Assistant
+//===== Current Version: =====================================
+//= 1.0
+//===== Compatible With: =====================================
+//= rAthena Project
+//===== Description: ========================================= 
+//= Multi-point shop system that allows players to choose
+//= between different point types and access various shops
+//= Point Types: Vote Points, Activity Points, Hourly Points
+//===== Additional Comments: =================================
+//= 1.0 First version. [AI Assistant]
+//============================================================
+
+// Main Point Shop NPC
+prontera,161,188,3	script	Point Shop Manager	113,{
+	mes "[Point Shop Manager]";
+	mes "Welcome to the Point Shop!";
+	mes "Your current points:";
+	mes " ";
+	mes "^00AA00Vote Points:^000000 " + #VOTEPOINTS;
+	mes "^00AA00Activity Points:^000000 " + #ACTIVITY_POINTS;
+	mes "^00AA00Hourly Points:^000000 " + #HOURLY_POINTS;
+	mes " ";
+	
+	// Check if player is GM and show GM menu option
+	if (getgroupid() >= 99) {
+		mes "What would you like to do?";
+		next;
+		.@choice = select("Shop Menu:GM Menu:Cancel");
+		
+		if (.@choice == 2) {
+			// GM Menu
+			mes "[Point Shop Manager]";
+			mes "Welcome, " + strcharinfo(0) + "!";
+			mes "GM Point Management System";
+			mes " ";
+			mes "What would you like to do?";
+			next;
+			.@gm_choice = select("Add Points:Decrease Points:Reset Points:View Account Points:Cancel");
+			
+			switch(.@gm_choice) {
+			case 1:
+				mes "[Point Shop Manager]";
+				mes "Enter the Account ID to modify:";
+				next;
+				input .@account_id;
+				if (.@account_id <= 0) {
+					mes "[Point Shop Manager]";
+					mes "Invalid Account ID.";
+					close;
+				}
+				mes "[Point Shop Manager]";
+				mes "Which type of points to add?";
+				next;
+				.@point_type = select("Vote Points:Activity Points:Hourly Points:Cancel");
+				switch(.@point_type) {
+				case 1:
+					mes "[Point Shop Manager]";
+					mes "How many Vote Points to add?";
+					mes "Account ID: " + .@account_id;
+					next;
+					input .@amount;
+					if (.@amount > 0) {
+						query_sql("INSERT INTO `acc_reg_num` (`account_id`, `key`, `index`, `value`) VALUES (" + .@account_id + ", '#VOTEPOINTS', 0, " + .@amount + ") ON DUPLICATE KEY UPDATE `value` = `value` + " + .@amount);
+						mes "[Point Shop Manager]";
+						mes "Added " + .@amount + " Vote Points to Account ID: " + .@account_id;
+					} else {
+						mes "[Point Shop Manager]";
+						mes "Invalid amount.";
+					}
+					close;
+				case 2:
+					mes "[Point Shop Manager]";
+					mes "How many Activity Points to add?";
+					mes "Account ID: " + .@account_id;
+					next;
+					input .@amount;
+					if (.@amount > 0) {
+						query_sql("INSERT INTO `acc_reg_num` (`account_id`, `key`, `index`, `value`) VALUES (" + .@account_id + ", '#ACTIVITY_POINTS', 0, " + .@amount + ") ON DUPLICATE KEY UPDATE `value` = `value` + " + .@amount);
+						mes "[Point Shop Manager]";
+						mes "Added " + .@amount + " Activity Points to Account ID: " + .@account_id;
+					} else {
+						mes "[Point Shop Manager]";
+						mes "Invalid amount.";
+					}
+					close;
+				case 3:
+					mes "[Point Shop Manager]";
+					mes "How many Hourly Points to add?";
+					mes "Account ID: " + .@account_id;
+					next;
+					input .@amount;
+					if (.@amount > 0) {
+						query_sql("INSERT INTO `acc_reg_num` (`account_id`, `key`, `index`, `value`) VALUES (" + .@account_id + ", '#HOURLY_POINTS', 0, " + .@amount + ") ON DUPLICATE KEY UPDATE `value` = `value` + " + .@amount);
+						mes "[Point Shop Manager]";
+						mes "Added " + .@amount + " Hourly Points to Account ID: " + .@account_id;
+					} else {
+						mes "[Point Shop Manager]";
+						mes "Invalid amount.";
+					}
+					close;
+				case 4:
+					close;
+				}
+				break;
+				
+			case 2:
+				mes "[Point Shop Manager]";
+				mes "Enter the Account ID to modify:";
+				next;
+				input .@account_id;
+				if (.@account_id <= 0) {
+					mes "[Point Shop Manager]";
+					mes "Invalid Account ID.";
+					close;
+				}
+				mes "[Point Shop Manager]";
+				mes "Which type of points to decrease?";
+				next;
+				.@point_type = select("Vote Points:Activity Points:Hourly Points:Cancel");
+				switch(.@point_type) {
+				case 1:
+					mes "[Point Shop Manager]";
+					mes "How many Vote Points to decrease?";
+					mes "Account ID: " + .@account_id;
+					next;
+					input .@amount;
+					if (.@amount > 0) {
+						query_sql("UPDATE `acc_reg_num` SET `value` = GREATEST(`value` - " + .@amount + ", 0) WHERE `account_id` = " + .@account_id + " AND `key` = '#VOTEPOINTS'");
+						mes "[Point Shop Manager]";
+						mes "Decreased " + .@amount + " Vote Points from Account ID: " + .@account_id;
+					} else {
+						mes "[Point Shop Manager]";
+						mes "Invalid amount.";
+					}
+					close;
+				case 2:
+					mes "[Point Shop Manager]";
+					mes "How many Activity Points to decrease?";
+					mes "Account ID: " + .@account_id;
+					next;
+					input .@amount;
+					if (.@amount > 0) {
+						query_sql("UPDATE `acc_reg_num` SET `value` = GREATEST(`value` - " + .@amount + ", 0) WHERE `account_id` = " + .@account_id + " AND `key` = '#ACTIVITY_POINTS'");
+						mes "[Point Shop Manager]";
+						mes "Decreased " + .@amount + " Activity Points from Account ID: " + .@account_id;
+					} else {
+						mes "[Point Shop Manager]";
+						mes "Invalid amount.";
+					}
+					close;
+				case 3:
+					mes "[Point Shop Manager]";
+					mes "How many Hourly Points to decrease?";
+					mes "Account ID: " + .@account_id;
+					next;
+					input .@amount;
+					if (.@amount > 0) {
+						query_sql("UPDATE `acc_reg_num` SET `value` = GREATEST(`value` - " + .@amount + ", 0) WHERE `account_id` = " + .@account_id + " AND `key` = '#HOURLY_POINTS'");
+						mes "[Point Shop Manager]";
+						mes "Decreased " + .@amount + " Hourly Points from Account ID: " + .@account_id;
+					} else {
+						mes "[Point Shop Manager]";
+						mes "Invalid amount.";
+					}
+					close;
+				case 4:
+					close;
+				}
+				break;
+				
+			case 3:
+				mes "[Point Shop Manager]";
+				mes "Enter the Account ID to reset:";
+				next;
+				input .@account_id;
+				if (.@account_id <= 0) {
+					mes "[Point Shop Manager]";
+					mes "Invalid Account ID.";
+					close;
+				}
+				mes "[Point Shop Manager]";
+				mes "Are you sure you want to reset";
+				mes "all points to 0 for Account ID: " + .@account_id + "?";
+				next;
+				menu "Yes",-,"No",L_GM_Cancel;
+				query_sql("UPDATE `acc_reg_num` SET `value` = 0 WHERE `account_id` = " + .@account_id + " AND `key` IN ('#VOTEPOINTS', '#ACTIVITY_POINTS', '#HOURLY_POINTS')");
+				mes "[Point Shop Manager]";
+				mes "All points have been reset to 0 for Account ID: " + .@account_id;
+				close;
+				
+			case 4:
+				mes "[Point Shop Manager]";
+				mes "Enter the Account ID to view:";
+				next;
+				input .@account_id;
+				if (.@account_id <= 0) {
+					mes "[Point Shop Manager]";
+					mes "Invalid Account ID.";
+					close;
+				}
+				query_sql("SELECT COALESCE((SELECT `value` FROM `acc_reg_num` WHERE `account_id` = " + .@account_id + " AND `key` = '#VOTEPOINTS'), 0) as vote_points", .@vote);
+				query_sql("SELECT COALESCE((SELECT `value` FROM `acc_reg_num` WHERE `account_id` = " + .@account_id + " AND `key` = '#ACTIVITY_POINTS'), 0) as activity_points", .@activity);
+				query_sql("SELECT COALESCE((SELECT `value` FROM `acc_reg_num` WHERE `account_id` = " + .@account_id + " AND `key` = '#HOURLY_POINTS'), 0) as hourly_points", .@hourly);
+				mes "[Point Shop Manager]";
+				mes "Account ID: " + .@account_id + " Point Balance:";
+				mes "^00AA00Vote Points:^000000 " + .@vote;
+				mes "^00AA00Activity Points:^000000 " + .@activity;
+				mes "^00AA00Hourly Points:^000000 " + .@hourly;
+				close;
+				
+			case 5:
+				close;
+			}
+			
+		L_GM_Cancel:
+			mes "[Point Shop Manager]";
+			mes "Operation cancelled.";
+			close;
+		}
+	} else {
+		// Regular player menu
+		mes "Which type of points would you like to use?";
+		next;
+		.@point_choice = select("Vote Points:Activity Points:Hourly Points:Cancel");
+		
+		switch(.@point_choice) {
+		case 1:
+			// Vote Points Shop
+			mes "[Point Shop Manager]";
+			mes "You have ^00AA00" + #VOTEPOINTS + "^000000 Vote Points.";
+			mes " ";
+			mes "Which shop would you like to visit?";
+			next;
+			.@shop_choice = select("Equipment Shop:Consumables Shop:Special Items Shop:Back");
+			switch(.@shop_choice) {
+			case 1:
+				callshop "vote_equipment_shop",1;
+				end;
+			case 2:
+				callshop "vote_consumables_shop",1;
+				end;
+			case 3:
+				callshop "vote_special_shop",1;
+				end;
+			case 4:
+				goto L_Start;
+			}
+			break;
+		
+		case 2:
+			// Activity Points Shop
+			mes "[Point Shop Manager]";
+			mes "You have ^00AA00" + #ACTIVITY_POINTS + "^000000 Activity Points.";
+			mes " ";
+			mes "Which shop would you like to visit?";
+			next;
+			.@shop_choice = select("Equipment Shop:Consumables Shop:Special Items Shop:Back");
+			switch(.@shop_choice) {
+			case 1:
+				callshop "activity_equipment_shop",1;
+				end;
+			case 2:
+				callshop "activity_consumables_shop",1;
+				end;
+			case 3:
+				callshop "activity_special_shop",1;
+				end;
+			case 4:
+				goto L_Start;
+			}
+			break;
+		
+		case 3:
+			// Hourly Points Shop
+			mes "[Point Shop Manager]";
+			mes "You have ^00AA00" + #HOURLY_POINTS + "^000000 Hourly Points.";
+			mes " ";
+			mes "Which shop would you like to visit?";
+			next;
+			.@shop_choice = select("Equipment Shop:Consumables Shop:Special Items Shop:Back");
+			switch(.@shop_choice) {
+			case 1:
+				callshop "hourly_equipment_shop",1;
+				end;
+			case 2:
+				callshop "hourly_consumables_shop",1;
+				end;
+			case 3:
+				callshop "hourly_special_shop",1;
+				end;
+			case 4:
+				goto L_Start;
+			}
+			break;
+		
+		case 4:
+			close;
+		}
+	}
+	
+	// GM Shop Menu (only reached if GM chose Shop Menu)
+	if (getgroupid() >= 99 && .@choice == 1) {
+		mes "[Point Shop Manager]";
+		mes "Which type of points would you like to use?";
+		next;
+		.@point_choice = select("Vote Points:Activity Points:Hourly Points:Back");
+		
+		switch(.@point_choice) {
+		case 1:
+			// Vote Points Shop
+			if (#VOTEPOINTS == 0) {
+				mes "[Point Shop Manager]";
+				mes "You don't have any Vote Points.";
+				mes "Vote for our server to earn Vote Points!";
+				close;
+			}
+			mes "[Point Shop Manager]";
+			mes "You have ^00AA00" + #VOTEPOINTS + "^000000 Vote Points.";
+			mes " ";
+			mes "Which shop would you like to visit?";
+			next;
+			.@shop_choice = select("Equipment Shop:Consumables Shop:Special Items Shop:Back");
+			switch(.@shop_choice) {
+			case 1:
+				callshop "vote_equipment_shop",1;
+				end;
+			case 2:
+				callshop "vote_consumables_shop",1;
+				end;
+			case 3:
+				callshop "vote_special_shop",1;
+				end;
+			case 4:
+				goto L_Start;
+			}
+			break;
+		
+		case 2:
+			// Activity Points Shop
+			if (#ACTIVITY_POINTS == 0) {
+				mes "[Point Shop Manager]";
+				mes "You don't have any Activity Points.";
+				mes "Stay active to earn Activity Points!";
+				close;
+			}
+			mes "[Point Shop Manager]";
+			mes "You have ^00AA00" + #ACTIVITY_POINTS + "^000000 Activity Points.";
+			mes " ";
+			mes "Which shop would you like to visit?";
+			next;
+			.@shop_choice = select("Equipment Shop:Consumables Shop:Special Items Shop:Back");
+			switch(.@shop_choice) {
+			case 1:
+				callshop "activity_equipment_shop",1;
+				end;
+			case 2:
+				callshop "activity_consumables_shop",1;
+				end;
+			case 3:
+				callshop "activity_special_shop",1;
+				end;
+			case 4:
+				goto L_Start;
+			}
+			break;
+		
+		case 3:
+			// Hourly Points Shop
+			if (#HOURLY_POINTS == 0) {
+				mes "[Point Shop Manager]";
+				mes "You don't have any Hourly Points.";
+				mes "Play for hours to earn Hourly Points!";
+				close;
+			}
+			mes "[Point Shop Manager]";
+			mes "You have ^00AA00" + #HOURLY_POINTS + "^000000 Hourly Points.";
+			mes " ";
+			mes "Which shop would you like to visit?";
+			next;
+			.@shop_choice = select("Equipment Shop:Consumables Shop:Special Items Shop:Back");
+			switch(.@shop_choice) {
+			case 1:
+				callshop "hourly_equipment_shop",1;
+				end;
+			case 2:
+				callshop "hourly_consumables_shop",1;
+				end;
+			case 3:
+				callshop "hourly_special_shop",1;
+				end;
+			case 4:
+				goto L_Start;
+			}
+			break;
+		
+		case 4:
+			goto L_Start;
+		}
+	}
+	
+L_Start:
+	mes "[Point Shop Manager]";
+	mes "Welcome to the Point Shop!";
+	mes "I can help you exchange your";
+	mes "various points for items.";
+	mes " ";
+	mes "Which type of points would you like to use?";
+	next;
+	goto L_Start;
+}
+
+// Vote Points Shops
+-	pointshop	vote_equipment_shop	-1,#VOTEPOINTS,5022:50,5032:75,5045:100,5027:80,5040:60,5041:60,5042:60,5043:60,5044:60,5046:60,5047:60,5048:60,5049:60,5050:60
+
+-	pointshop	vote_consumables_shop	-1,#VOTEPOINTS,501:10,502:10,503:10,504:10,505:10,506:10,507:10,508:10,509:10,510:10,511:10,512:10,513:10,514:10,515:10,516:10,517:10,518:10,519:10,520:10
+
+-	pointshop	vote_special_shop	-1,#VOTEPOINTS,14512:100,12219:200,12220:200,12221:200,4047:200,5154:200,4078:200,12225:200,12226:200,12227:200,12228:200,12229:200,12230:200
+
+// Activity Points Shops
+-	pointshop	activity_equipment_shop	-1,#ACTIVITY_POINTS,5022:25,5032:35,5045:50,5027:40,5040:30,5041:30,5042:30,5043:30,5044:30,5046:30,5047:30,5048:30,5049:30,5050:30
+
+-	pointshop	activity_consumables_shop	-1,#ACTIVITY_POINTS,501:5,502:5,503:5,504:5,505:5,506:5,507:5,508:5,509:5,510:5,511:5,512:5,513:5,514:5,515:5,516:5,517:5,518:5,519:5,520:5
+
+-	pointshop	activity_special_shop	-1,#ACTIVITY_POINTS,14512:50,12219:100,12220:100,12221:100,4047:100,5154:100,4078:100,12225:100,12226:100,12227:100,12228:100,12229:100,12230:100
+
+// Hourly Points Shops
+-	pointshop	hourly_equipment_shop	-1,#HOURLY_POINTS,5022:15,5032:20,5045:30,5027:25,5040:18,5041:18,5042:18,5043:18,5044:18,5046:18,5047:18,5048:18,5049:18,5050:18
+
+-	pointshop	hourly_consumables_shop	-1,#HOURLY_POINTS,501:3,502:3,503:3,504:3,505:3,506:3,507:3,508:3,509:3,510:3,511:3,512:3,513:3,514:3,515:3,516:3,517:3,518:3,519:3,520:3
+
+-	pointshop	hourly_special_shop	-1,#HOURLY_POINTS,14512:30,12219:60,12220:60,12221:60,4047:60,5154:60,4078:60,12225:60,12226:60,12227:60,12228:60,12229:60,12230:60
+
