@@ -11908,3 +11908,25 @@ Set position for NPC dialog in pixels.
 Set position for NPC dialog in screen size percent.
 
 ---------------------------------------
+
+
+
+*costume1 <equipment position>;
+
+Converts equipment in <equipment position> to costume version that has no stats.
+
+Applicable positions are:
+ EQI_HEAD_TOP - Top Headgear
+ EQI_HEAD_MID - Middle Headgear
+ EQI_HEAD_LOW - Lower Headgear
+ EQI_GARMENT - Garment
+
+---------------------------------------
+
+*getcostumeitem <item id>;
+*getcostumeitem <"item name">;
+
+Spawn a costume version of an <item id> or <"item name"> in attached player's inventory.
+
+---------------------------------------
+
