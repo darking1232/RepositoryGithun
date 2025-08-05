@@ -1,0 +1,163 @@
+//===== rAthena Script =======================================
+//= saders Hourly Rewards
+//===== By: ==================================================
+//= Sader1992
+//https://rathena.org/board/profile/30766-sader1992/
+//===== Current Version: =====================================
+//= 1.2
+//===== Compatible With: ===================================== 
+//= rAthena Project
+//https://rathena.org/board/files/file/3647-saders-hourly-rewards/
+//https://github.com/sader1992/sader_scripts
+//===== Description: =========================================
+//==== all the configuration are in the last
+//==== support gepard / ip / or without them
+//==== if you use ip/gepard sql will be used for that
+//==== can add minimem level to get the rewards
+//==== can change the time
+//==== can ban the vending from the rewards (it will reset after relogin)
+//==== can add rewards else then variable
+//==== there is a shop npc for the variable
+//==== you can make it only for vip
+//==== can ban idle players for X time from the Hourly Rewards
+//==== player can ban his char from getting the reward by @HourlyBan (it will reset after relogin)
+//============================================================
+//==== please send me a message if you find error
+//==== if you like my work maybe consider support me at paypal
+//==== sader1992@gmail.com
+//============================================================
+//==== 1.1 FIX Critical issue with gepard/ip and compatibility with my other scripts
+//==== 1.2 FIX GrPard Variable
+//============================================================
+-	script	sader_Hourly_Rewards	-1,{
+
+OnHourlyRewards:
+		if (#HOURLY_POINTS + 2 > 300) {
+				dispbottom "Status: ^FF0000Maximum Points Reached^000000";
+				dispbottom " ";
+				dispbottom "You have reached the maximum of 300 points!";
+				dispbottom "Current points: ^FF0000" + #HOURLY_POINTS + "^000000";
+				dispbottom " ";
+				dispbottom "Please spend some points to start collecting again.";
+				#Hourly_Rewads_Check = 0;
+				#Hourly_Rewads_Checker = 0;
+				end;
+		}
+
+		if(.s_idle){
+			if(checkidle() > .s_idle_time){
+				message strcharinfo(0),"[Hourly Rewards]: No Hourly Rewards for IDLE Players!.";
+				addtimer .s_time, strnpcinfo(3)+"::OnHourlyRewards";
+				end;
+			}
+		}
+		if(.s_vip){
+			if(!vip_status(VIP_STATUS_ACTIVE)){
+				message strcharinfo(0),"[Hourly Rewards]: if you are a VIP you will get Hourly Rewards!.";
+				addtimer .s_time, strnpcinfo(3)+"::OnHourlyRewards";
+				end;
+			}
+		}
+		if(BaseLevel < .s_hourly_level){
+			message strcharinfo(0),"[Hourly Rewards]: if you are level "+.s_hourly_level+" and more you will get Hourly Rewards!.";
+			addtimer .s_time, strnpcinfo(3)+"::OnHourlyRewards";
+			end;
+		}
+		if(.s_vinding){
+			if(checkvending() & .s_vinding){
+				message strcharinfo(0),"[Hourly Rewards]: No Hourly Rewards for Venders , Relogin to change that .";
+				#Hourly_Rewads_Check = 0;
+				#Hourly_Rewads_Checker = 0;
+				end;
+			}
+		}
+			if(checkchatting()){
+				message strcharinfo(0),"[Hourly Rewards]: No Hourly Rewards for Venders , Relogin to change that .";
+				#Hourly_Rewads_Check = 0;
+				#Hourly_Rewads_Checker = 0;
+				end;
+			}
+
+		#Hourly_Rewads_Check += 1;
+		//message strcharinfo(0),"[Hourly Rewards]: you Gain your Reward.";
+		callsub Hourly_Rewads;
+		addtimer .s_time, strnpcinfo(3)+"::OnHourlyRewards";
+end;
+
+OnPCLogoutEvent:
+	#Hourly_Rewads_Check = 0;
+end;
+
+OnPCLoginEvent:
+	if (#HOURLY_POINTS + 2 > 300) {
+			dispbottom "Hourly Reward Status: ^FF0000Maximum Points Reached^000000";
+			dispbottom " ";
+			dispbottom "You have reached the maximum of 300 points!";
+			dispbottom "Current Hourly points: ^FF0000" + #HOURLY_POINTS + "^000000";
+			dispbottom " ";
+			dispbottom "Please spend some points to start collecting again.";
+			end;
+	}
+	addtimer .s_time, strnpcinfo(3)+"::OnHourlyRewards";
+	dispbottom "^00AA00[Hourly Rewards]^000000: You have been automatically registered!";
+	dispbottom "You will receive 2 points every 30 minutes for staying online.";
+	dispbottom "Use @hourlyrewards to check your progress anytime.";
+	// Initialize last reward time if not set
+	if (#hourly_last_reward == 0) {
+		#hourly_last_reward = gettimetick(2) * 1000;
+	}
+	#Hourly_Rewads_Checker = 1;
+end;
+
+OnCommand:	
+	// Check if player is registered
+	if (#HOURLY_POINTS + 2 > 300) {
+			dispbottom "Hourly Reward Status: ^FF0000Maximum Points Reached^000000";
+			dispbottom " ";
+			dispbottom "You have reached the maximum of 300 points!";
+			dispbottom "Current Hourly points: ^FF0000" + #HOURLY_POINTS + "^000000";
+			dispbottom " ";
+			dispbottom "Please spend some points to start collecting again.";
+			end;
+	}
+	if (#Hourly_Rewads_Checker == 0) {
+		dispbottom "You are not registered for hourly rewards.Please Re-login to Automatically register";
+		end;
+	}
+		dispbottom "Hourly Reward Status: ^00AA00Ongoing!^000000";
+		dispbottom " ";
+		dispbottom "Current Hourly points: ^00AA00" + #HOURLY_POINTS + "^000000";
+		dispbottom "Stay online to continue earning points Every 30 Minutes!";
+		end;
+
+OnInit:
+	.s_idle = 0; //	ban hourly rewards from idle players ? 0 no / 1 yes {if player didn't move for x time he wont get hourly reward}  , DEFAULT = 0
+	.s_idle_time = 1800; //	this the time for idle in secend  , DEFAULT = 1800 (30 min)
+	.s_vip = 0; //	1 = only for VIP / 0 = for everyone  , DEFAULT = 0
+	.s_time = 1800000; //	1000 = 1 secend | 60000 = 1 min | 3600000 = 1 houre  , DEFAULT = 3600000 (1 hr)
+	.s_hourly_level = 0; //	Minimam level to get the Houerly rewards / 0 = no minimem level  , DEFAULT 0
+	.s_GePard_ip = 0; //	0 = no Gepard / 1 = Gepard / 2 = IP  , DEFAULT 0
+	.s_vinding = 7; //	DEFAULT 7 / 0 = will give the reward even if vending / 1 = no normal vending / 2 = no @autotrade / 4 = no buyingstore | Example: if you want to ban normal vend and buying store you add the numbers 1+4=5
+	bindatcmd "hourlyrewards", strnpcinfo(3)+"::OnCommand";
+end;
+
+Hourly_Rewads:
+		if (#HOURLY_POINTS + 2 > 300) {
+				dispbottom "Status: ^FF0000Maximum Points Reached^000000";
+				dispbottom " ";
+				dispbottom "You have reached the maximum of 300 points!";
+				dispbottom "Current points: ^FF0000" + #HOURLY_POINTS + "^000000";
+				dispbottom " ";
+				dispbottom "Please spend some points to start collecting again.";
+				#Hourly_Rewads_Check = 0;
+				#Hourly_Rewads_Checker = 0;
+				end;
+		}
+
+	// Give 2 #HOURLY_POINTS every 30 minutes
+	set #HOURLY_POINTS, #HOURLY_POINTS + 2;
+	#hourly_last_reward = gettimetick(2) * 1000; // Update last reward time
+	message strcharinfo(0),"[Hourly Points]: You've gained 2 Hourly Points.";
+	message strcharinfo(0),"[Hourly Points]: You now have a total of "+#HOURLY_POINTS+" Points!";
+return;
+}

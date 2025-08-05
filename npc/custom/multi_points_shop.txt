@@ -67,6 +67,7 @@ prontera,161,188,3	script	Point Shop Manager	113,{
 						query_sql("INSERT INTO `acc_reg_num` (`account_id`, `key`, `index`, `value`) VALUES (" + .@account_id + ", '#VOTEPOINTS', 0, " + .@amount + ") ON DUPLICATE KEY UPDATE `value` = `value` + " + .@amount);
 						mes "[Point Shop Manager]";
 						mes "Added " + .@amount + " Vote Points to Account ID: " + .@account_id;
+						mes "Let the player relogin to reflect the amount";
 					} else {
 						mes "[Point Shop Manager]";
 						mes "Invalid amount.";
@@ -82,6 +83,8 @@ prontera,161,188,3	script	Point Shop Manager	113,{
 						query_sql("INSERT INTO `acc_reg_num` (`account_id`, `key`, `index`, `value`) VALUES (" + .@account_id + ", '#ACTIVITY_POINTS', 0, " + .@amount + ") ON DUPLICATE KEY UPDATE `value` = `value` + " + .@amount);
 						mes "[Point Shop Manager]";
 						mes "Added " + .@amount + " Activity Points to Account ID: " + .@account_id;
+						mes "Let the player relogin to reflect the amount";
+
 					} else {
 						mes "[Point Shop Manager]";
 						mes "Invalid amount.";
@@ -95,8 +98,11 @@ prontera,161,188,3	script	Point Shop Manager	113,{
 					input .@amount;
 					if (.@amount > 0) {
 						query_sql("INSERT INTO `acc_reg_num` (`account_id`, `key`, `index`, `value`) VALUES (" + .@account_id + ", '#HOURLY_POINTS', 0, " + .@amount + ") ON DUPLICATE KEY UPDATE `value` = `value` + " + .@amount);
+						
 						mes "[Point Shop Manager]";
 						mes "Added " + .@amount + " Hourly Points to Account ID: " + .@account_id;
+						mes "Let the player relogin to reflect the amount";
+
 					} else {
 						mes "[Point Shop Manager]";
 						mes "Invalid amount.";
@@ -132,6 +138,8 @@ prontera,161,188,3	script	Point Shop Manager	113,{
 						query_sql("UPDATE `acc_reg_num` SET `value` = GREATEST(`value` - " + .@amount + ", 0) WHERE `account_id` = " + .@account_id + " AND `key` = '#VOTEPOINTS'");
 						mes "[Point Shop Manager]";
 						mes "Decreased " + .@amount + " Vote Points from Account ID: " + .@account_id;
+						mes "Let the player relogin to reflect the amount";
+
 					} else {
 						mes "[Point Shop Manager]";
 						mes "Invalid amount.";
@@ -147,6 +155,8 @@ prontera,161,188,3	script	Point Shop Manager	113,{
 						query_sql("UPDATE `acc_reg_num` SET `value` = GREATEST(`value` - " + .@amount + ", 0) WHERE `account_id` = " + .@account_id + " AND `key` = '#ACTIVITY_POINTS'");
 						mes "[Point Shop Manager]";
 						mes "Decreased " + .@amount + " Activity Points from Account ID: " + .@account_id;
+						mes "Let the player relogin to reflect the amount";
+
 					} else {
 						mes "[Point Shop Manager]";
 						mes "Invalid amount.";
@@ -162,6 +172,8 @@ prontera,161,188,3	script	Point Shop Manager	113,{
 						query_sql("UPDATE `acc_reg_num` SET `value` = GREATEST(`value` - " + .@amount + ", 0) WHERE `account_id` = " + .@account_id + " AND `key` = '#HOURLY_POINTS'");
 						mes "[Point Shop Manager]";
 						mes "Decreased " + .@amount + " Hourly Points from Account ID: " + .@account_id;
+						mes "Let the player relogin to reflect the amount";
+
 					} else {
 						mes "[Point Shop Manager]";
 						mes "Invalid amount.";
