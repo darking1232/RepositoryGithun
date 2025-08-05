@@ -1,0 +1,212 @@
+//===== rAthena Script ======================================= 
+//= Dress Room
+//===== Description ==========================================
+//= Dress room NPC that allows players to disguise as any trans job
+//= class (2nd job and extended 2nd job only).
+//===== By: ================================================== 
+//= Secret's Scripting Service
+//===== Changelog: ===========================================
+//= 1.0 Initial version. [Secret]
+//= 1.1 Updated for latest rAthena (2024) - Simplified to 2nd job and extended 2nd job only
+//= 1.2 Updated to allow cross-class transformations
+//===== License: =============================================
+// Copyright 2018 Jittapan P.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+//= to deal in the Software without restriction, including without limitation the rights to use,
+//= copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+//= and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+//=
+//= The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+//=
+//= THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+//= EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//= FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+//= IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+//= DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+//= TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//============================================================
+
+prontera,169,188,4	script	Dress Room#sc	2_M_DYEINGER,{
+function RestrictClass;
+function HasjROCostume;
+function ChangeAppr;
+
+function RestrictClass {
+	.@eac = eaclass();
+	if(.@eac&EAJ_BASEMASK == EAJ_NOVICE) return 0;
+	if(.@eac&EAJL_2 && roclass(.@eac|EAJL_UPPER) != -1){
+		return 1;
+	}
+	return 0;
+}
+
+function HasjROCostume {
+	switch(roclass(eaclass()&EAJ_UPPERMASK|EAJL_THIRD)) {
+		case Job_Guillotine_Cross:
+		case Job_Genetic:
+		case Job_Royal_Guard:
+		case Job_Arch_Bishop:
+		case Job_Mechanic:
+		case Job_Ranger:
+		case Job_Minstrel:
+		case Job_Wanderer:
+		case Job_Warlock:
+		case Job_Sorcerer:
+		case Job_Sura:
+		case Job_Rune_Knight:
+		// Uncomment lines below to enable certain job when their respective jRO costume is released and you patched the sprite in your client.
+		//case Job_Dragon_Knight:
+		//case Job_Meister:
+		//case Job_Shadow_Cross:
+		//case Job_Arch_Mage:
+		//case Job_Cardinal:
+		//case Job_Windhawk:
+		//case Job_Imperial_Guard:
+			return 1;
+		default:
+			return 0;
+	}
+}
+
+function ChangeAppr {
+	if(Zeny < .cost_dressroom) {
+		mes .n$;
+		mes "You don't have enough Zeny.";
+		close;
+	}
+	switch(getarg(1)){
+		case 0: // Normal Mode - Visual Only
+			// Store the job ID for visual appearance only
+			set baselook, getarg(0);
+			// Use costume_changebase for visual-only changes
+			costume_changebase getarg(0);
+			break;
+		case 1: // jRO Mode
+			if(!HasjROCostume()) return;
+			changebase roclass(eaclass()|EAJL_THIRD);
+			setlook LOOK_CLOTHES_COLOR,0;
+			setlook LOOK_BODY2,!(getlook(LOOK_BODY2));
+			//atcommand "@bodystyle " + !(getlook(LOOK_BODY2));
+			baselook = 0;
+			break;
+	}
+	Zeny -= .cost_dressroom;
+	mes .n$;
+	mes "Here you are!";
+	close;
+}
+
+	.@TYPE_CHANGEBASE = 0;
+	.@TYPE_SETLOOK = 1;
+	
+	mes .n$;
+	if(!RestrictClass()){
+		mes "Your class isn't allowed to use this NPC.";
+		close;
+	}
+	mes "I can change your appearance to any trans job class at a cost of ^FF0000" + callfunc("F_InsertComma",.cost_dressroom) + "^000000z!";
+	if(HasjROCostume()){
+		mes "I also have a brand new costume for your class!";
+	}
+	mes "Which class do you want to change your appearance to?";
+	next;
+	
+	// Create select options for all trans jobs
+	if(HasjROCostume()) {
+		.@choice = select("Knight", "Wizard", "Hunter", "Priest", "Blacksmith", "Assassin", "Crusader", "Sage", "Bard/Dancer", "Monk", "Alchemist", "Rogue", getlook(LOOK_BODY2) ? "Restore costume" : "New jRO costume");
+		switch(.@choice) {
+			case 1:
+				ChangeAppr(Job_Knight,.@TYPE_CHANGEBASE);
+				break;
+			case 2:
+				ChangeAppr(Job_Wizard,.@TYPE_CHANGEBASE);
+				break;
+			case 3:
+				ChangeAppr(Job_Hunter,.@TYPE_CHANGEBASE);
+				break;
+			case 4:
+				ChangeAppr(Job_Priest,.@TYPE_CHANGEBASE);
+				break;
+			case 5:
+				ChangeAppr(Job_Blacksmith,.@TYPE_CHANGEBASE);
+				break;
+			case 6:
+				ChangeAppr(Job_Assassin,.@TYPE_CHANGEBASE);
+				break;
+			case 7:
+				ChangeAppr(Job_Crusader,.@TYPE_CHANGEBASE);
+				break;
+			case 8:
+				ChangeAppr(Job_Sage,.@TYPE_CHANGEBASE);
+				break;
+			case 9:
+				ChangeAppr(Job_Bard,.@TYPE_CHANGEBASE);
+				break;
+			case 10:
+				ChangeAppr(Job_Monk,.@TYPE_CHANGEBASE);
+				break;
+			case 11:
+				ChangeAppr(Job_Alchemist,.@TYPE_CHANGEBASE);
+				break;
+			case 12:
+				ChangeAppr(Job_Rogue,.@TYPE_CHANGEBASE);
+				break;
+			case 13:
+				ChangeAppr(0,.@TYPE_SETLOOK);
+				break;
+		}
+	} else {
+		.@choice = select("Knight", "Wizard", "Hunter", "Priest", "Blacksmith", "Assassin", "Crusader", "Sage", "Bard/Dancer", "Monk", "Alchemist", "Rogue");
+		switch(.@choice) {
+			case 1:
+				ChangeAppr(Job_Knight,.@TYPE_CHANGEBASE);
+				break;
+			case 2:
+				ChangeAppr(Job_Wizard,.@TYPE_CHANGEBASE);
+				break;
+			case 3:
+				ChangeAppr(Job_Hunter,.@TYPE_CHANGEBASE);
+				break;
+			case 4:
+				ChangeAppr(Job_Priest,.@TYPE_CHANGEBASE);
+				break;
+			case 5:
+				ChangeAppr(Job_Blacksmith,.@TYPE_CHANGEBASE);
+				break;
+			case 6:
+				ChangeAppr(Job_Assassin,.@TYPE_CHANGEBASE);
+				break;
+			case 7:
+				ChangeAppr(Job_Crusader,.@TYPE_CHANGEBASE);
+				break;
+			case 8:
+				ChangeAppr(Job_Sage,.@TYPE_CHANGEBASE);
+				break;
+			case 9:
+				ChangeAppr(Job_Bard,.@TYPE_CHANGEBASE);
+				break;
+			case 10:
+				ChangeAppr(Job_Monk,.@TYPE_CHANGEBASE);
+				break;
+			case 11:
+				ChangeAppr(Job_Alchemist,.@TYPE_CHANGEBASE);
+				break;
+			case 12:
+				ChangeAppr(Job_Rogue,.@TYPE_CHANGEBASE);
+				break;
+		}
+	}
+	close;
+		
+OnPCLoginEvent:
+	if(baselook && .dress_perma){
+		changebase baselook;
+	}
+	end;
+OnInit:
+	.n$ = "[Dress Room]"; // NPC Name
+	.cost_dressroom = 10000; // Cost
+	.dress_perma = 1;
+} 
+

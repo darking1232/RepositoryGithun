@@ -13273,6 +13273,50 @@ BUILDIN_FUNC(changebase)
 }
 
 /**
+ * costume_changebase - Visual-only appearance change that doesn't affect skills
+ * costume_changebase(<job ID number>{,<account ID>});
+ */
+BUILDIN_FUNC(costume_changebase)
+{
+	TBL_PC *sd=nullptr;
+	int32 vclass;
+
+	if( !script_mapid2sd(3,sd) )
+		return SCRIPT_CMD_SUCCESS;
+
+	vclass = script_getnum(st,2);
+	if(vclass == JOB_WEDDING)
+	{
+		if (!battle_config.wedding_modifydisplay || //Do not show the wedding sprites
+			sd->class_&JOBL_BABY //Baby classes screw up when showing wedding sprites. [Skotlex] They don't seem to anymore.
+			)
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// Store original class for restoration
+	uint16 original_class = sd->class_;
+	
+	// Change to target class for appearance only
+	if(!sd->disguise && vclass != sd->vd.look[LOOK_BASE]) {
+		status_set_viewdata(sd, vclass);
+		//Updated client view. Base, Weapon and Cloth Colors.
+		clif_changelook(sd,LOOK_BASE,sd->vd.look[LOOK_BASE]);
+		clif_changelook(sd,LOOK_WEAPON,sd->status.weapon);
+		if (sd->vd.look[LOOK_CLOTHES_COLOR])
+			clif_changelook(sd,LOOK_CLOTHES_COLOR,sd->vd.look[LOOK_CLOTHES_COLOR]);
+		if (sd->vd.look[LOOK_BODY2])
+			clif_changelook(sd,LOOK_BODY2,sd->vd.look[LOOK_BODY2]);
+		
+		// Restore original class to maintain skills
+		sd->class_ = original_class;
+		
+		// Don't call clif_skillinfoblock to preserve skill display
+	}
+	return SCRIPT_CMD_SUCCESS;
+}
+
+
+/**
  * Change account sex and unequip all item and request for a changesex to char-serv
  * changesex({<char_id>});
  */
@@ -28678,6 +28722,7 @@ BUILDIN_DEF(plagiarism, "iii"),
 	BUILDIN_DEF(getexp2,"ii?"),
 	BUILDIN_DEF(costume1, "i"),
 	BUILDIN_DEF(getcostumeitem, "v"),
+	BUILDIN_DEF(costume_changebase,"i?"),
 	BUILDIN_DEF(recalculatestat,""),
 	BUILDIN_DEF(hateffect,"ii"),
 	BUILDIN_DEF(getrandomoptinfo, "i"),

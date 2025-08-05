@@ -7752,6 +7752,49 @@ ACMD_FUNC(summon)
 
 	return 0;
 }
+/*==========================================
+ * @costume_changebase
+ *------------------------------------------*/
+ACMD_FUNC(costume_changebase)
+{
+	int32 job_id = 0;
+	nullpo_retr(-1, sd);
+
+	memset(atcmd_output, '\0', sizeof(atcmd_output));
+
+	if (!message || !*message || sscanf(message, "%d", &job_id) < 1) {
+		sprintf(atcmd_output, "Please enter a job ID (usage: @costume_changebase <job ID>).");
+		clif_displaymessage(fd, atcmd_output);
+		return -1;
+	}
+
+	// Store original class for restoration
+	uint16 original_class = sd->class_;
+	
+	// Change to target class for appearance only
+	if(job_id != sd->vd.look[LOOK_BASE]) {
+		status_set_viewdata(sd, job_id);
+		//Updated client view. Base, Weapon and Cloth Colors.
+		clif_changelook(sd,LOOK_BASE,sd->vd.look[LOOK_BASE]);
+		clif_changelook(sd,LOOK_WEAPON,sd->status.weapon);
+		if (sd->vd.look[LOOK_CLOTHES_COLOR])
+			clif_changelook(sd,LOOK_CLOTHES_COLOR,sd->vd.look[LOOK_CLOTHES_COLOR]);
+		if (sd->vd.look[LOOK_BODY2])
+			clif_changelook(sd,LOOK_BODY2,sd->vd.look[LOOK_BODY2]);
+		
+		// Restore original class to maintain skills
+		sd->class_ = original_class;
+		
+		// Don't call clif_skillinfoblock to preserve skill display
+		clif_displaymessage(fd, "Costume appearance changed! Your skills remain unchanged.");
+	} else {
+		clif_displaymessage(fd, "You are already using that appearance.");
+		return -1;
+	}
+
+	return 0;
+}
+
 
 /*==========================================
  * @adjgroup
@@ -10387,10 +10430,11 @@ const struct {
 	{"showrate", "Shows current server experience and drop rates"},
 	{"fullstrip", "Strips all equipment from a target"},
 	{"costume", "Changes costume look of equipment"},
-	{"cloneequip", "Clones another character’s equipment"},
-	{"clonestat", "Clones another character’s stats"},
+	{"cloneequip", "Clones another character's equipment"},
+	{"clonestat", "Clones another character's stats"},
 	{"bodystyle", "Changes the body sprite style"},
 	{"adopt", "Adopts another player as a child"},
+	{"costume_changebase", "Changes appearance to job class without affecting skills"},
 	{"agitstart3", "Starts War of Emperium TE"},
 	{"agitend3", "Ends War of Emperium TE"},
 	{"limitedsale", "Starts a limited-time item sale event"},
@@ -11880,6 +11924,7 @@ void atcommand_basecommands(void) {
 	 **/
 	AtCommandInfo atcommand_base[] = {
 #include <custom/atcommand_def.inc>
+		ACMD_DEF(costume_changebase),
 		ACMD_DEF(monsterarenatimer),
 		ACMD_DEF(vipbuff),
 		ACMD_DEF(vipstatus),
