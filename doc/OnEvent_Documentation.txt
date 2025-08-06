@@ -1,0 +1,680 @@
+# rAthena OnEvent Functions Documentation
+
+## Overview
+This documentation covers all the built-in OnEvent functions in rAthena that trigger on specific player actions or game events. These events are used for tracking player activities, implementing game mechanics, and creating interactive experiences.
+
+## Available OnEvent Functions
+
+### 1. OnItemUseEvent
+**Trigger**: Fires whenever any item is used by a player
+**Scope**: Global event that affects all players
+**Custom Functions**: `getitemid()`, `getitemindex()`
+
+### 2. OnPCDieEvent
+**Trigger**: Fires when a player character dies
+**Scope**: Global event that affects all players
+**Variables**: `killerrid` - ID of the killer
+
+### 3. OnPCKillEvent
+**Trigger**: Fires when a player kills another player
+**Scope**: Global event that affects all players
+**Variables**: `killedrid` - ID of the player killed
+
+### 4. OnNPCKillEvent
+**Trigger**: Fires when a player kills a monster without label
+**Scope**: Global event that affects all players
+**Variables**: `killedrid` - Class (mob ID) of the monster killed, `killedgid` - ID (unique mob game ID) of the monster killed
+
+### 5. OnPCLoginEvent
+**Trigger**: Fires when a player logs into the game
+**Scope**: Global event that affects all players
+
+### 6. OnPCLogoutEvent
+**Trigger**: Fires when a player logs out of the game
+**Scope**: Global event that affects all players
+
+### 7. OnPCLoadMapEvent
+**Trigger**: Fires when a player steps in a map marked with the 'loadevent' mapflag
+**Scope**: Map-specific event (requires mapflag)
+**Variables**: Player RID is attached
+
+### 8. OnPCBaseLvUpEvent
+**Trigger**: Fires when a player's base level increases
+**Scope**: Global event that affects all players
+
+### 9. OnPCJobLvUpEvent
+**Trigger**: Fires when a player's job level increases
+**Scope**: Global event that affects all players
+
+### 10. OnPCIdentifyEvent
+**Trigger**: Fires when a player successfully identifies an item
+**Scope**: Global event that affects all players
+**Variables**: `@identify_idx` - Index number of the item that was identified
+
+## Event Handler: OnItemUseEvent
+
+### Syntax
+```c
+OnItemUseEvent:
+    // Event handling code
+    end;
+```
+
+### Description
+- **Trigger**: Fires whenever a player uses any item in the game
+- **Scope**: Global event that affects all players
+- **Location**: Must be declared in a script block with `-1` map ID (global script)
+- **Access**: Available to all players regardless of location
+
+### Usage Example
+```c
+-	script	ItemUseEventTracker	-1,{
+OnItemUseEvent:
+    // Get player information
+    .@player_name$ = strcharinfo(0);
+    .@map_name$ = strcharinfo(3);
+    .@char_id = getcharid(0);
+    .@account_id = getcharid(3);
+    
+    // Get item information using custom functions
+    .@item_id = getitemid();
+    .@item_index = getitemindex();
+    
+    // Handle specific items
+    if (.@map_name$ == "new_1-1") {
+        if (.@item_id == 604) {
+            // Dead Branch used
+            callfunc "F_TrackBranchUsage", .@char_id, .@account_id, .@player_name$, 1;
+        }
+    }
+    end;
+}
+```
+
+## Event Handler: OnPCDieEvent
+
+### Syntax
+```c
+OnPCDieEvent:
+    // Event handling code
+    end;
+```
+
+### Description
+- **Trigger**: Fires whenever a player character dies
+- **Scope**: Global event that affects all players
+- **Location**: Must be declared in a script block with `-1` map ID (global script)
+- **Access**: Available to all players regardless of location
+- **Built-in**: This is a standard rAthena event handler (no custom implementation required)
+
+### Usage Example
+```c
+-	script	PvPKillAnnouncer	-1,{
+OnPCDieEvent:
+    // Check if the death happened in new_1-1 map
+    if (strcharinfo(3) == "new_1-1") {
+        // Get killer and victim names
+        .@victim$ = strcharinfo(0);
+        .@killer$ = rid2name(attacker);
+        
+        // Only announce if there's a valid killer (not suicide or mob death)
+        if (.@killer$ != "" && .@killer$ != .@victim$) {
+            mapannounce "new_1-1", "[PvP] " + .@killer$ + " has defeated " + .@victim$ + " in the Dead Branch Room!", bc_map, 0xFF0000;
+        }
+    }
+    end;
+}
+```
+
+## Event Handler: OnPCKillEvent
+
+### Syntax
+```c
+OnPCKillEvent:
+    // Event handling code
+    end;
+```
+
+### Description
+- **Trigger**: Fires when a player kills another player
+- **Scope**: Global event that affects all players
+- **Variables**: `killedrid` - ID of the player killed
+- **Built-in**: This is a standard rAthena event handler
+
+### Usage Example
+```c
+-	script	PvPKillTracker	-1,{
+OnPCKillEvent:
+    if (strcharinfo(3) == "new_1-1") {
+        .@killer$ = strcharinfo(0);
+        .@victim$ = rid2name(killedrid);
+        
+        // Track PvP kill
+        dispbottom "You killed " + .@victim$ + "!";
+        
+        // Update kill statistics
+        callfunc "F_UpdateKillStats", .@killer$, .@victim$;
+    }
+    end;
+}
+```
+
+## Event Handler: OnNPCKillEvent
+
+### Syntax
+```c
+OnNPCKillEvent:
+    // Event handling code
+    end;
+```
+
+### Description
+- **Trigger**: Fires when a player kills a monster without label
+- **Scope**: Global event that affects all players
+- **Variables**: `killedrid` - Class (mob ID) of the monster killed, `killedgid` - ID (unique mob game ID) of the monster killed
+- **Built-in**: This is a standard rAthena event handler
+
+### Usage Example
+```c
+-	script	MonsterKillTracker	-1,{
+OnNPCKillEvent:
+    .@player$ = strcharinfo(0);
+    .@monster_id = killedrid;
+    .@monster_name$ = getmonsterinfo(.@monster_id, MOB_NAME);
+    
+    dispbottom "You killed " + .@monster_name$ + "!";
+    
+    // Track monster kills for quests
+    callfunc "F_TrackMonsterKill", .@player$, .@monster_id;
+    end;
+}
+```
+
+## Event Handler: OnPCLoginEvent
+
+### Syntax
+```c
+OnPCLoginEvent:
+    // Event handling code
+    end;
+```
+
+### Description
+- **Trigger**: Fires when a player logs into the game
+- **Scope**: Global event that affects all players
+- **Built-in**: This is a standard rAthena event handler
+
+### Usage Example
+```c
+-	script	LoginTracker	-1,{
+OnPCLoginEvent:
+    .@player$ = strcharinfo(0);
+    .@account_id = getcharid(3);
+    
+    // Welcome message
+    dispbottom "Welcome back, " + .@player$ + "!";
+    
+    // Track login statistics
+    callfunc "F_TrackLogin", .@account_id, .@player$;
+    end;
+}
+```
+
+## Event Handler: OnPCLogoutEvent
+
+### Syntax
+```c
+OnPCLogoutEvent:
+    // Event handling code
+    end;
+```
+
+### Description
+- **Trigger**: Fires when a player logs out of the game
+- **Scope**: Global event that affects all players
+- **Built-in**: This is a standard rAthena event handler
+
+### Usage Example
+```c
+-	script	LogoutTracker	-1,{
+OnPCLogoutEvent:
+    .@player$ = strcharinfo(0);
+    .@account_id = getcharid(3);
+    
+    // Save player data
+    callfunc "F_SavePlayerData", .@account_id, .@player$;
+    
+    // Track logout statistics
+    callfunc "F_TrackLogout", .@account_id, .@player$;
+    end;
+}
+```
+
+## Event Handler: OnPCLoadMapEvent
+
+### Syntax
+```c
+OnPCLoadMapEvent:
+    // Event handling code
+    end;
+```
+
+### Description
+- **Trigger**: Fires when a player steps in a map marked with the 'loadevent' mapflag
+- **Scope**: Map-specific event (requires mapflag)
+- **Variables**: Player RID is attached
+- **Built-in**: This is a standard rAthena event handler
+
+### Usage Example
+```c
+-	script	MapLoadTracker	-1,{
+OnPCLoadMapEvent:
+    .@player$ = strcharinfo(0);
+    .@map$ = strcharinfo(3);
+    
+    // Welcome message for specific maps
+    if (.@map$ == "prontera") {
+        dispbottom "Welcome to Prontera, " + .@player$ + "!";
+    }
+    
+    // Track map visits
+    callfunc "F_TrackMapVisit", .@player$, .@map$;
+    end;
+}
+```
+
+## Event Handler: OnPCBaseLvUpEvent
+
+### Syntax
+```c
+OnPCBaseLvUpEvent:
+    // Event handling code
+    end;
+```
+
+### Description
+- **Trigger**: Fires when a player's base level increases
+- **Scope**: Global event that affects all players
+- **Built-in**: This is a standard rAthena event handler
+
+### Usage Example
+```c
+-	script	LevelUpTracker	-1,{
+OnPCBaseLvUpEvent:
+    .@player$ = strcharinfo(0);
+    .@base_level = BaseLevel;
+    
+    // Level up announcement
+    dispbottom "Congratulations! You reached Base Level " + .@base_level + "!";
+    
+    // Track level up statistics
+    callfunc "F_TrackLevelUp", .@player$, .@base_level;
+    end;
+}
+```
+
+## Event Handler: OnPCJobLvUpEvent
+
+### Syntax
+```c
+OnPCJobLvUpEvent:
+    // Event handling code
+    end;
+```
+
+### Description
+- **Trigger**: Fires when a player's job level increases
+- **Scope**: Global event that affects all players
+- **Built-in**: This is a standard rAthena event handler
+
+### Usage Example
+```c
+-	script	JobLevelUpTracker	-1,{
+OnPCJobLvUpEvent:
+    .@player$ = strcharinfo(0);
+    .@job_level = JobLevel;
+    .@job_name$ = jobname(Class);
+    
+    // Job level up announcement
+    dispbottom "Congratulations! Your " + .@job_name$ + " reached Job Level " + .@job_level + "!";
+    
+    // Track job level up statistics
+    callfunc "F_TrackJobLevelUp", .@player$, .@job_level, Class;
+    end;
+}
+```
+
+## Event Handler: OnPCIdentifyEvent
+
+### Syntax
+```c
+OnPCIdentifyEvent:
+    // Event handling code
+    end;
+```
+
+### Description
+- **Trigger**: Fires when a player successfully identifies an item
+- **Scope**: Global event that affects all players
+- **Variables**: `@identify_idx` - Index number of the item that was identified
+- **Built-in**: This is a standard rAthena event handler
+
+### Usage Example
+```c
+-	script	IdentifyTracker	-1,{
+OnPCIdentifyEvent:
+    .@player$ = strcharinfo(0);
+    .@item_index = @identify_idx;
+    
+    // Get item information
+    .@item_id = getitemid(.@item_index);
+    .@item_name$ = getitemname(.@item_id);
+    
+    dispbottom "You identified " + .@item_name$ + "!";
+    
+    // Track identification statistics
+    callfunc "F_TrackIdentify", .@player$, .@item_id;
+    end;
+}
+```
+
+## Custom Functions for OnItemUseEvent
+
+### getitemid()
+
+#### Syntax
+```c
+getitemid()
+```
+
+#### Description
+Returns the ID of the item being used in the `OnItemUseEvent`. This function accesses the `sd->itemid` value from the session data.
+
+#### Return Value
+- **Type**: Integer
+- **Range**: Valid item ID numbers (e.g., 604 for Dead Branch, 605 for Bloody Branch)
+- **Error**: Returns 0 if no valid session data
+
+#### Usage Example
+```c
+.@item_id = getitemid();
+if (.@item_id == 604) {
+    dispbottom "Dead Branch used!";
+}
+```
+
+#### Implementation Details
+```cpp
+/*==========================================
+ * getitemid() - Returns the ID of the item being used in OnItemUseEvent
+ *------------------------------------------*/
+BUILDIN_FUNC(getitemid)
+{
+    map_session_data *sd;
+
+    if (!script_rid2sd(sd))
+        return SCRIPT_CMD_FAILURE;
+
+    script_pushint(st, sd->itemid);
+    return SCRIPT_CMD_SUCCESS;
+}
+```
+
+### getitemindex()
+
+#### Syntax
+```c
+getitemindex()
+```
+
+#### Description
+Returns the index of the item being used in the `OnItemUseEvent`. This function accesses the `sd->itemindex` value from the session data.
+
+#### Return Value
+- **Type**: Integer
+- **Range**: Valid item index numbers
+- **Error**: Returns 0 if no valid session data
+
+#### Usage Example
+```c
+.@item_index = getitemindex();
+dispbottom "Item index: " + .@item_index;
+```
+
+#### Implementation Details
+```cpp
+/*==========================================
+ * getitemindex() - Returns the index of the item being used in OnItemUseEvent
+ *------------------------------------------*/
+BUILDIN_FUNC(getitemindex)
+{
+    map_session_data *sd;
+
+    if (!script_rid2sd(sd))
+        return SCRIPT_CMD_FAILURE;
+
+    script_pushint(st, sd->itemindex);
+    return SCRIPT_CMD_SUCCESS;
+}
+```
+
+## Source Code Integration
+
+### Required Source Modifications (Only for OnItemUseEvent)
+
+#### 1. Function Declarations (src/map/script.cpp)
+Add these declarations to the `BUILDIN_DEF` table:
+```cpp
+BUILDIN_DEF(getitemid, ""),
+BUILDIN_DEF(getitemindex, ""),
+```
+
+#### 2. Function Implementations (src/map/script.cpp)
+Add the complete function implementations as shown in the implementation details above.
+
+### Compilation Requirements
+- Only `OnItemUseEvent` requires source code modification
+- All other OnEvent functions are built-in and work out of the box
+- Must be compiled after adding the functions to `script.cpp`
+- Functions are only available after server restart
+
+## Event Flow Examples
+
+### OnItemUseEvent Flow
+```
+Player uses item ? OnItemUseEvent fires ? getitemid()/getitemindex() called
+```
+
+### OnPCDieEvent Flow
+```
+Player dies ? OnPCDieEvent fires ? Check killer/victim ? Process PvP announcement
+```
+
+### OnNPCKillEvent Flow
+```
+Player kills monster ? OnNPCKillEvent fires ? Get monster info ? Track kill statistics
+```
+
+## Common Item IDs
+
+| Item Name | Item ID | Description |
+|-----------|---------|-------------|
+| Dead Branch | 604 | Summons random monster |
+| Bloody Branch | 605 | Summons random monster (different pool) |
+
+## Error Handling
+
+### Session Data Validation
+- Built-in events include automatic error checking
+- `getitemid()` and `getitemindex()` include error checking for OnItemUseEvent
+- Returns `SCRIPT_CMD_FAILURE` if no valid session data
+- Prevents server crashes from invalid data
+
+### Debugging
+```c
+// Debug output for troubleshooting
+dispbottom "[Debug] OnItemUseEvent triggered";
+dispbottom "[Debug] Item ID: " + .@item_id;
+dispbottom "[Debug] Map: " + .@map_name$;
+```
+
+## Performance Considerations
+
+### Event Frequency
+- All OnEvent functions fire for their respective triggers
+- Consider performance impact on high-traffic servers
+- Use map-specific conditions to limit processing
+
+### Optimization Tips
+```c
+// Only process specific maps
+if (strcharinfo(3) == "new_1-1") {
+    // Process only for specific map
+}
+
+// Only process specific items
+if (.@item_id == 604 || .@item_id == 605) {
+    // Process only specific items
+}
+```
+
+## Integration Examples
+
+### Complete PvP System
+```c
+-	script	PvPSystem	-1,{
+OnPCDieEvent:
+    if (strcharinfo(3) == "new_1-1") {
+        .@victim$ = strcharinfo(0);
+        .@killer$ = rid2name(attacker);
+        
+        if (.@killer$ != "" && .@killer$ != .@victim$) {
+            mapannounce "new_1-1", "[PvP] " + .@killer$ + " defeated " + .@victim$ + "!", bc_map, 0xFF0000;
+            callfunc "F_TrackPvPKill", .@killer$, .@victim$;
+        }
+    }
+    end;
+
+OnPCKillEvent:
+    if (strcharinfo(3) == "new_1-1") {
+        .@killer$ = strcharinfo(0);
+        .@victim$ = rid2name(killedrid);
+        callfunc "F_UpdateKillStats", .@killer$, .@victim$;
+    }
+    end;
+}
+```
+
+### Quest Tracking System
+```c
+-	script	QuestTracker	-1,{
+OnNPCKillEvent:
+    .@player$ = strcharinfo(0);
+    .@monster_id = killedrid;
+    callfunc "F_UpdateQuestProgress", .@player$, .@monster_id;
+    end;
+
+OnItemUseEvent:
+    .@player$ = strcharinfo(0);
+    .@item_id = getitemid();
+    callfunc "F_TrackItemUsage", .@player$, .@item_id;
+    end;
+}
+```
+
+### Player Statistics System
+```c
+-	script	PlayerStats	-1,{
+OnPCLoginEvent:
+    .@player$ = strcharinfo(0);
+    .@account_id = getcharid(3);
+    callfunc "F_TrackLogin", .@account_id, .@player$;
+    end;
+
+OnPCLogoutEvent:
+    .@player$ = strcharinfo(0);
+    .@account_id = getcharid(3);
+    callfunc "F_TrackLogout", .@account_id, .@player$;
+    end;
+
+OnPCBaseLvUpEvent:
+    .@player$ = strcharinfo(0);
+    .@base_level = BaseLevel;
+    callfunc "F_TrackLevelUp", .@player$, .@base_level;
+    end;
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. Functions Not Available (OnItemUseEvent)
+**Problem**: `getitemid()` or `getitemindex()` not recognized
+**Solution**: Ensure source code modifications are compiled and server restarted
+
+#### 2. Event Not Triggering
+**Problem**: OnEvent functions not firing
+**Solution**: Check script syntax and ensure proper script declaration
+
+#### 3. Wrong Data Values
+**Problem**: Incorrect item IDs or player information
+**Solution**: Verify data in the respective databases
+
+### Debug Commands
+```c
+// Add debug output to verify event firing
+dispbottom "[Debug] OnEvent triggered";
+
+// Verify player information
+dispbottom "[Debug] Player: " + strcharinfo(0);
+
+// Verify map location
+dispbottom "[Debug] Map: " + strcharinfo(3);
+```
+
+## Version History
+
+### v2.0 (Current)
+- Comprehensive documentation for all OnEvent functions
+- Custom `getitemid()` and `getitemindex()` functions for OnItemUseEvent
+- Integration examples for various systems
+- Performance optimization guidelines
+
+### v1.0 (Previous)
+- Initial implementation of `OnItemUseEvent`
+- Basic function documentation
+- Dead Branch PvP Room integration
+
+### Future Enhancements
+- Additional OnEvent functions as they become available
+- Enhanced error handling
+- Performance optimizations
+- Extended tracking capabilities
+
+## Related Files
+
+### Source Files
+- `src/map/script.cpp` - Function implementations
+- `src/map/npc.cpp` - Event handling
+- `npc/custom/db_room.txt` - Event handler implementation
+
+### Database Files
+- `sql-files/upgrades/2024-01-01--db_room_player_ranking.sql` - Database schema
+
+### Documentation
+- `OnPCDieEvent_Documentation.md` - Player death event documentation
+- `README.md` - Project overview
+
+## Support
+
+For issues or questions regarding these functions:
+1. Check server logs for error messages
+2. Verify source code modifications are correct (for OnItemUseEvent)
+3. Ensure proper compilation and restart
+4. Test with debug output enabled
+
+---
+
+**Note**: Most OnEvent functions are built-in rAthena event handlers and work out of the box. Only `OnItemUseEvent` requires custom source code modification with the `getitemid()` and `getitemindex()` functions. 
+

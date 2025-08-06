@@ -1,0 +1,565 @@
+//===== rAthena Script =======================================
+//= Dead Branch PvP Room with Ranking System
+//===== By: ==================================================
+//= Assistant
+//===== Current Version: =====================================
+//= 1.0
+//===== Compatible With: =====================================
+//= rAthena Project
+//===== Description: =========================================
+//= NPC for deadbranch PvP room with ranking system
+//= Features: Teleport to room, view rankings, reset stats
+//============================================================
+
+// Main NPC for deadbranch PvP room
+prontera,147,189,4	script	Dead Branch Room	4_F_01,{
+	mes "[Dead Branch Room]";
+	mes "Welcome to the Dead Branch PvP Room!";
+	mes "This is a special area where you can use Dead Branches and Bloody Branches.";
+	mes "All usage is tracked and ranked!";
+	next;
+	
+	// Check if player is admin to show admin options
+	if (getgroupid() == 99) {
+		switch(select("Teleport to Room:View My Stats:View Rankings:Information:Grab my reward:View Monthly Winners:Reset All Stats (Admin):Monthly Reset (Admin):Close")) {
+		case 1:
+			mes "[Dead Branch Room]";
+			mes "I'll teleport you to the PvP room.";
+			mes "Remember: PvP is enabled, no save, no teleport, no memo!";
+			close2;
+			warp "new_1-1", 0, 0;
+			end;
+			
+		case 2:
+			callfunc "F_ViewMyStats";
+			break;
+			
+		case 3:
+			callfunc "F_ViewRankings";
+			break;
+			
+		case 4:
+			mes "[Dead Branch Room]";
+			mes "^FF0000=== INFORMATION ===^000000";
+			mes "";
+			mes "Welcome to the Dead Branch PvP Room!";
+			mes "";
+			mes "^FF0000How to participate:^000000";
+			mes "1. Select 'Teleport to Room' to enter the PvP area";
+			mes "2. Use Dead Branches (ID: 604) or Bloody Branches (ID: 12103)";
+			mes "3. All branch usage is automatically tracked";
+			mes "";
+			next;
+			mes "[Dead Branch Room]";
+			mes "^FF0000How to view rankings:^000000";
+			mes "• Select 'View Rankings' from the main menu";
+			mes "• Rankings show top players by total branch usage";
+			mes "• Rankings reset monthly on the 1st day";
+			mes "";
+			next;
+			mes "[Dead Branch Room]";
+			mes "^FF0000Monthly Rewards:^000000";
+			mes "• 1st Place: 100,000 Zeny + 10 Branch Points";
+			mes "• 2nd Place: 50,000 Zeny + 5 Branch Points";
+			mes "• 3rd Place: 25,000 Zeny + 2 Branch Points";
+			mes "• Claim rewards via 'Grab my reward' option";
+			mes "";
+			next;
+			mes "[Dead Branch Room]";
+			mes "^FF0000Important Notes:^000000";
+			mes "• PvP is enabled in the room";
+			mes "• No save, teleport, or memo allowed";
+			mes "• Only Dead and Bloody Branches are tracked";
+			mes "";
+			mes "^444444--- End of Information ---^000000";
+			close;
+			
+		case 5:
+			callfunc "F_GrabMyReward";
+			break;
+			
+		case 6:
+			callfunc "F_ViewMonthlyWinners";
+			break;
+			
+		case 7:
+			mes "[Dead Branch Room]";
+			mes "WARNING: This will reset ALL player stats!";
+			mes "Are you absolutely sure?";
+			next;
+			if (select("Yes:No") == 1) {
+				callfunc "F_ResetAllStats";
+			}
+			break;
+			
+		case 8:
+			mes "[Dead Branch Room]";
+			mes "WARNING: This will perform monthly reset!";
+			mes "This will archive current data and reset all stats.";
+			mes "Are you absolutely sure?";
+			next;
+			if (select("Yes:No") == 1) {
+				callfunc "F_MonthlyReset";
+				mes "[Dead Branch Room]";
+				mes "Monthly reset completed successfully!";
+				close;
+			}
+			break;
+			
+		case 9:
+			close;
+		}
+	} else {
+		switch(select("Teleport to Room:View My Stats:View Rankings:Information:Grab my reward:View Monthly Winners:Close")) {
+		case 1:
+			mes "[Dead Branch Room]";
+			mes "I'll teleport you to the PvP room.";
+			mes "Remember: PvP is enabled, no save, no teleport, no memo!";
+			close2;
+			warp "new_1-1", 0, 0;
+			end;
+			
+		case 2:
+			callfunc "F_ViewMyStats";
+			break;
+			
+		case 3:
+			callfunc "F_ViewRankings";
+			break;
+			
+		case 4:
+			mes "[Dead Branch Room]";
+			mes "^FF0000=== INFORMATION ===^000000";
+			mes "";
+			mes "Welcome to the Dead Branch PvP Room!";
+			mes "";
+			mes "^FF0000How to participate:^000000";
+			mes "1. Select 'Teleport to Room' to enter the PvP area";
+			mes "2. Use Dead Branches (ID: 604) or Bloody Branches (ID: 12103)";
+			mes "3. All branch usage is automatically tracked";
+			mes "";
+			next;
+			mes "[Dead Branch Room]";
+			mes "^FF0000How to view rankings:^000000";
+			mes "• Select 'View Rankings' from the main menu";
+			mes "• Rankings show top players by total branch usage";
+			mes "• Rankings reset monthly on the 1st day";
+			mes "";
+			next;
+			mes "[Dead Branch Room]";
+			mes "^FF0000Monthly Rewards:^000000";
+			mes "• 1st Place: 100,000 Zeny + 10 Branch Points";
+			mes "• 2nd Place: 50,000 Zeny + 5 Branch Points";
+			mes "• 3rd Place: 25,000 Zeny + 2 Branch Points";
+			mes "• Claim rewards via 'Grab my reward' option";
+			mes "";
+			next;
+			mes "[Dead Branch Room]";
+			mes "^FF0000Important Notes:^000000";
+			mes "• PvP is enabled in the room";
+			mes "• No save, teleport, or memo allowed";
+			mes "• Only Dead and Bloody Branches are tracked";
+			mes "";
+			mes "^444444--- End of Information ---^000000";
+			close;
+			
+		case 5:
+			callfunc "F_GrabMyReward";
+			break;
+			
+		case 6:
+			callfunc "F_ViewMonthlyWinners";
+			break;
+			
+		case 7:
+			close;
+		}
+	}
+}
+
+// Function to view player's own stats
+function	script	F_ViewMyStats	{
+	.@char_id = getcharid(0);
+	.@account_id = getcharid(3);
+	.@player_name$ = strcharinfo(0);
+	
+	// Get player's stats
+	query_sql("SELECT COALESCE(SUM(dead_branch_count), 0) as dead_count, COALESCE(SUM(bloody_branch_count), 0) as bloody_count, COALESCE(SUM(total_branches), 0) as total FROM db_room_player_ranking WHERE char_id = " + .@char_id, .@dead_count, .@bloody_count, .@total_count);
+	
+	mes "[Dead Branch Room]";
+	mes "Stats for " + .@player_name$ + ":";
+	mes "Dead Branches used: " + .@dead_count;
+	mes "Bloody Branches used: " + .@bloody_count;
+	mes "Total branches used: " + .@total_count;
+	close;
+}
+
+// Function to view rankings
+function	script	F_ViewRankings	{
+	mes "[Dead Branch Room]";
+	mes "^FF0000=== TOP 10 PLAYERS ===^000000";
+	mes "";
+	mes "Ranking |  Name   |  Total Branch";
+	// Get top 10 players by total usage
+	query_sql("SELECT player_name, COALESCE(SUM(dead_branch_count), 0) as dead_count, COALESCE(SUM(bloody_branch_count), 0) as bloody_count, COALESCE(SUM(total_branches), 0) as total FROM db_room_player_ranking GROUP BY char_id ORDER BY total DESC LIMIT 10", .@player_names$, .@dead_counts, .@bloody_counts, .@totals);
+	
+	if (getarraysize(.@player_names$) == 0) {
+		mes "^444444No statistics available yet.^000000";
+		close;
+	}
+	
+	for (.@i = 0; .@i < getarraysize(.@player_names$); .@i++) {
+		// Format rank with brackets like [1], [2], etc.
+		.@rank_display$ = "[" + (.@i + 1) + "]";
+		
+		// Get player name
+		.@name_display$ = .@player_names$[.@i];
+		
+		if (.@i == getarraysize(.@player_names$) - 1) {
+			.@point_display$ = .@totals[.@i];
+		} else {
+			.@point_display$ = .@totals[.@i] + "";
+		}
+		
+		// Display the formatted line matching the image format
+		mes .@rank_display$ + " - " + .@name_display$ + " - " + .@point_display$;
+	}
+	
+	mes "";
+	mes "---Monthly Reset---";
+	mes "^444444--- End of Rankings ---^000000";
+	close;
+}
+
+// Function to grab monthly rewards
+function	script	F_GrabMyReward	{
+	.@char_id = getcharid(0);
+	.@player_name$ = strcharinfo(0);
+	
+	// Get server time from database for accurate calculation
+	query_sql("SELECT UNIX_TIMESTAMP(NOW())", .@server_time);
+	.@current_time = .@server_time[0];
+	
+	// Get current date components from server
+	query_sql("SELECT YEAR(NOW()), MONTH(NOW()), DAY(NOW())", .@current_year, .@current_month, .@current_day);
+	
+	// Calculate next month's 1st day timestamp
+	if (.@current_month == 12) {
+		.@next_month_year = .@current_year + 1;
+		.@next_month = 1;
+	} else {
+		.@next_month_year = .@current_year;
+		.@next_month = .@current_month + 1;
+	}
+	
+	// Format month with leading zero if needed
+	if (.@next_month < 10) {
+		.@next_month_str$ = "0" + .@next_month;
+	} else {
+		.@next_month_str$ = .@next_month;
+	}
+	
+	// Get timestamp for next month's 1st day at 00:00:00
+	.@date_string$ = .@next_month_year + "-" + .@next_month_str$ + "-01 00:00:00";
+	.@next_reset_time = query_sql("SELECT UNIX_TIMESTAMP('" + .@date_string$ + "')", .@next_reset_timestamp);
+	
+
+	
+	// Check if we got a valid timestamp
+	if (getarraysize(.@next_reset_timestamp) == 0 || .@next_reset_timestamp[0] <= 0) {
+		// Fallback calculation if SQL fails
+		.@time_left = 86400 * 30; // Default to 30 days
+	} else {
+		.@time_left = .@next_reset_timestamp[0] - .@current_time;
+	}
+	
+	// Convert to days, hours, minutes
+	if (.@time_left < 0) {
+		// If time is negative, set to 0
+		.@time_left = 0;
+	}
+	.@days_left = .@time_left / 86400; // 86400 seconds in a day
+	.@hours_left = (.@time_left % 86400) / 3600; // Remaining hours
+	.@minutes_left = (.@time_left % 3600) / 60; // Remaining minutes
+	
+	// Check if player is in top 3 for the previous month
+	query_sql("SELECT rank_position FROM (SELECT char_id, player_name, total_branches, ROW_NUMBER() OVER (ORDER BY total_branches DESC) as rank_position FROM db_room_player_ranking WHERE MONTH(created_at) = MONTH(DATE_SUB(NOW(), INTERVAL 1 MONTH)) AND YEAR(created_at) = YEAR(DATE_SUB(NOW(), INTERVAL 1 MONTH))) as ranked WHERE char_id = " + .@char_id + " AND rank_position <= 3", .@rank_position);
+	
+	if (getarraysize(.@rank_position) == 0) {
+		mes "[Dead Branch Room]";
+		mes "Sorry, you didn't qualify for any rewards last month.";
+		mes "Keep using branches to improve your ranking!";
+		mes "";
+		mes "^FF0000Time until next monthly reset:^000000";
+		mes .@days_left + " days, " + .@hours_left + " hours, " + .@minutes_left + " minutes";
+		mes "";
+		mes "^444444Top 3 players can claim rewards after reset.^000000";
+		close;
+	}
+	
+	// Check if player already claimed their reward from the archive table
+	query_sql("SELECT reward_claimed FROM db_room_player_ranking_archive WHERE char_id = " + .@char_id + " AND reward_claimed = 1 AND archived_at = (SELECT MAX(archived_at) FROM db_room_player_ranking_archive)", .@already_claimed);
+	
+	if (getarraysize(.@already_claimed) > 0) {
+		mes "[Dead Branch Room]";
+		mes "You have already claimed your reward for last month.";
+		mes "";
+		mes "^FF0000Time until next monthly reset:^000000";
+		mes .@days_left + " days, " + .@hours_left + " hours, " + .@minutes_left + " minutes";
+		close;
+	}
+	
+	// Give rewards based on position
+	if (.@rank_position[0] == 1) {
+		mes "[Dead Branch Room]";
+		mes "^FF0000Congratulations! You were #1 last month!^000000";
+		mes "Reward: 100,000 Zeny + 10 Branch Points";
+		// Add zeny and items here
+		set zeny, zeny + 100000;
+		// You can add item rewards here
+		mes "Reward claimed successfully!";
+	} else if (.@rank_position[0] == 2) {
+		mes "[Dead Branch Room]";
+		mes "^C0C0C0Congratulations! You were #2 last month!^000000";
+		mes "Reward: 50,000 Zeny + 5 Branch Points";
+		set zeny, zeny + 50000;
+		mes "Reward claimed successfully!";
+	} else if (.@rank_position[0] == 3) {
+		mes "[Dead Branch Room]";
+		mes "^CD7F32Congratulations! You were #3 last month!^000000";
+		mes "Reward: 25,000 Zeny + 2 Branch Points";
+		set zeny, zeny + 25000;
+		mes "Reward claimed successfully!";
+	}
+	
+	// Mark reward as claimed in the archive table
+	query_sql("UPDATE db_room_player_ranking_archive SET reward_claimed = 1 WHERE char_id = " + .@char_id + " AND archived_at = (SELECT MAX(archived_at) FROM db_room_player_ranking_archive)");
+	
+	mes "";
+	mes "^FFD700Time until next monthly reset:^000000";
+	mes .@days_left + " days, " + .@hours_left + " hours, " + .@minutes_left + " minutes";
+	close;
+}
+
+// Function to reset all stats (admin only)
+function	script	F_ResetAllStats	{
+	query_sql("DELETE FROM db_room_player_ranking");
+	
+	mes "[Dead Branch Room]";
+	mes "All player stats have been reset successfully!";
+	close;
+}
+
+// Function to perform monthly reset
+function	script	F_MonthlyReset	{
+
+	// Create archive table if it doesn't exist
+	query_sql("CREATE TABLE IF NOT EXISTS `db_room_player_ranking_archive` LIKE `db_room_player_ranking`");
+	query_sql("ALTER TABLE `db_room_player_ranking_archive` ADD COLUMN IF NOT EXISTS `archived_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP");
+
+
+	// Clear existing archive data for this month (to avoid duplicates)
+	query_sql("DELETE FROM db_room_player_ranking_archive WHERE MONTH(archived_at) = MONTH(NOW()) AND YEAR(archived_at) = YEAR(NOW())");
+	
+	// Archive current month's data before reset
+	query_sql("INSERT INTO db_room_player_ranking_archive SELECT *, NOW() as archived_at FROM db_room_player_ranking WHERE total_branches > 0");
+	
+	// Reset all current stats
+	query_sql("UPDATE db_room_player_ranking SET dead_branch_count = 0, bloody_branch_count = 0, total_branches = 0, reward_claimed = 0");
+	
+	
+	// Announce the reset
+	announce "[Dead Branch Room] Monthly reset completed! Top 3 players can now claim their rewards!", bc_all, 0xFFD700;
+	
+	return;
+}
+
+// Function to view monthly winners from archived data
+function	script	F_ViewMonthlyWinners	{
+	mes "[Dead Branch Room]";
+	mes "=== MONTHLY WINNERS ===^000000";
+	mes "";
+	
+	// Get the most recent archived winners data
+	query_sql("SELECT player_name, total_branches, rank_position, char_id FROM (SELECT player_name, total_branches, char_id, ROW_NUMBER() OVER (ORDER BY total_branches DESC) as rank_position FROM db_room_player_ranking_archive WHERE archived_at = (SELECT MAX(archived_at) FROM db_room_player_ranking_archive)) as ranked WHERE rank_position <= 3 ORDER BY rank_position", .@player_names$, .@total_branches, .@rank_positions, .@char_ids);
+	
+	if (getarraysize(.@player_names$) == 0) {
+		mes "^FFD700No winners data available for last month.^000000";
+		mes "This could mean:";
+		mes "• No monthly reset has occurred yet";
+		mes "• No players used branches last month";
+		mes "• Data has been cleared";
+		close;
+	}
+	
+	mes " LAST MONTH'S TOP 3 WINNERS ^000000";
+	mes "";
+	
+	for (.@i = 0; .@i < getarraysize(.@player_names$); .@i++) {
+		.@rank = .@rank_positions[.@i];
+		.@name$ = .@player_names$[.@i];
+		.@total = .@total_branches[.@i];
+		.@char_id = .@char_ids[.@i];
+		
+		// Check if this winner has claimed their reward from the archive table
+		query_sql("SELECT reward_claimed FROM db_room_player_ranking_archive WHERE char_id = " + .@char_id + " AND reward_claimed = 1 AND archived_at = (SELECT MAX(archived_at) FROM db_room_player_ranking_archive)", .@claimed_status);
+		.@has_claimed = getarraysize(.@claimed_status) > 0;
+		
+		// Color coding for different positions
+		if (.@rank == 1) {
+			.@color$ = "^FF0000"; // Gold for 1st
+			.@medal$ = "";
+		} else if (.@rank == 2) {
+			.@color$ = "^0000FF"; // Silver for 2nd
+			.@medal$ = "";
+		} else if (.@rank == 3) {
+			.@color$ = "^FFA500"; // Bronze for 3rd
+			.@medal$ = "";
+		}
+		
+		// Display winner with reward status
+		if (.@has_claimed) {
+			mes .@color$ + .@medal$ + "     TOP : " + .@rank + " ";
+			mes "" + .@name$ + " (" + .@total + " branches) -"; 
+			mes "^00FF00 Reward Claimed^000000";
+		} else {
+			mes .@color$ + .@medal$ + "     TOP : " + .@rank + " ";
+			mes "" + .@name$ + " (" + .@total + " branches) -";
+			mes "^FF0000 Reward not Claimed^000000";
+		}
+	}
+	
+	mes "";
+	mes "^444444--- End of Monthly Winners ---^000000";
+	close;
+}
+
+
+
+// Function to track branch usage
+function	script	F_TrackBranchUsage	{
+	.@char_id = getarg(0);
+	.@account_id = getarg(1);
+	.@player_name$ = getarg(2);
+	.@branch_type = getarg(3); // 1 = Dead Branch, 2 = Bloody Branch
+	
+	// Check if player already has a record
+	query_sql("SELECT id FROM db_room_player_ranking WHERE char_id = " + .@char_id + " LIMIT 1", .@existing_id);
+	
+	// Fix existing record if account_id is 0 (from before our fix)
+	if (getarraysize(.@existing_id) > 0) {
+		query_sql("UPDATE db_room_player_ranking SET account_id = " + .@account_id + " WHERE char_id = " + .@char_id + " AND account_id = 0");
+	}
+	
+	if (getarraysize(.@existing_id) > 0) {
+		// Update existing record
+		if (.@branch_type == 1) {
+			query_sql("UPDATE db_room_player_ranking SET dead_branch_count = dead_branch_count + 1, total_branches = total_branches + 1, last_used = NOW() WHERE char_id = " + .@char_id);
+		} else {
+			query_sql("UPDATE db_room_player_ranking SET bloody_branch_count = bloody_branch_count + 1, total_branches = total_branches + 1, last_used = NOW() WHERE char_id = " + .@char_id);
+		}
+	} else {
+		// Create new record
+		if (.@branch_type == 1) {
+			query_sql("INSERT INTO db_room_player_ranking (char_id, account_id, player_name, dead_branch_count, bloody_branch_count, total_branches, created_at, last_used) VALUES (" + .@char_id + ", " + .@account_id + ", '" + .@player_name$ + "', 1, 0, 1, NOW(), NOW())");
+		} else {
+			query_sql("INSERT INTO db_room_player_ranking (char_id, account_id, player_name, dead_branch_count, bloody_branch_count, total_branches, created_at, last_used) VALUES (" + .@char_id + ", " + .@account_id + ", '" + .@player_name$ + "', 0, 1, 1, NOW(), NOW())");
+		}
+	}
+}
+
+
+// Custom Item Usage Event Script
+// This script uses the OnItemUseEvent that triggers when any item is used
+-	script	ItemUseEventTracker	-1,{
+OnItemUseEvent:
+	// Get the map name first to check if we should process this event
+	.@map_name$ = strcharinfo(3);
+	
+	// Only process if we're in the DB room (new_1-1)
+	if (.@map_name$ == "new_1-1") {
+		// Get player information
+		.@player_name$ = strcharinfo(0);
+		.@char_id = getcharid(0);
+		.@account_id = getcharid(3);
+		
+		// Get item information from the event using our new functions
+		.@item_id = getitemid();
+		.@item_index = getitemindex();
+		
+		// Log the item usage for debugging
+		//dispbottom "[ItemUseEvent] " + .@player_name$ + " used item ID " + .@item_id + " on map " + .@map_name$;
+		
+		// Check for Dead Branch (item ID 604)
+		if (.@item_id == 604) {
+			//dispbottom "[System] Dead Branch used in DB Room!";
+			callfunc "F_TrackBranchUsage", .@char_id, .@account_id, .@player_name$, 1;
+		}
+		// Check for Bloody Branch (item ID 605)
+		else if (.@item_id == 12103) {
+			//dispbottom "[System] Bloody Branch used in DB Room!";
+			callfunc "F_TrackBranchUsage", .@char_id, .@account_id, .@player_name$, 2;
+		}
+		else {
+			//dispbottom "[System] Other item used in DB Room: " + .@item_id;
+		}
+	}
+	
+	// You can add more map-specific item checks here for future scripts
+	// Example:
+	// if (.@map_name$ == "some_map" && .@item_id == 123) {
+	//     callfunc "F_HandleSomeOtherItem", .@char_id, .@account_id;
+	// }
+	
+	end;
+}
+
+// PvP Kill Announcer Script
+// This script announces when someone kills another player in the DB room
+-	script	PvPKillAnnouncer	-1,{
+OnPCDieEvent:
+	// Check if the death happened in new_1-1 map
+	if (strcharinfo(3) == "new_1-1") {
+		// Get killer and victim names
+		.@victim$ = strcharinfo(0);
+		.@killer$ = rid2name(attacker);
+		
+		// Only announce if there's a valid killer (not suicide or mob death)
+		if (.@killer$ != "" && .@killer$ != .@victim$) {
+			mapannounce "new_1-1", "[PvP] " + .@killer$ + " has defeated " + .@victim$ + " in the Dead Branch Room!", bc_map, 0xFF0000;
+		}
+	}
+	end;
+}
+
+// SQL Table Creation for Dead Branch PvP Room Ranking System
+// This creates the table if it doesn't exist
+-	script	TableInitializer	-1,{
+OnInit:
+	query_sql("CREATE TABLE IF NOT EXISTS `db_room_player_ranking` (`id` int(11) NOT NULL AUTO_INCREMENT, `char_id` int(11) NOT NULL, `account_id` int(11) NOT NULL, `player_name` varchar(24) NOT NULL, `dead_branch_count` int(11) NOT NULL DEFAULT 0, `bloody_branch_count` int(11) NOT NULL DEFAULT 0, `total_branches` int(11) NOT NULL DEFAULT 0, `reward_claimed` tinyint(1) NOT NULL DEFAULT 0, `last_used` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `char_id` (`char_id`), KEY `account_id` (`account_id`), KEY `player_name` (`player_name`), KEY `total_branches` (`total_branches`), KEY `last_used` (`last_used`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+	
+	// Add reward_claimed column if it doesn't exist (for existing tables)
+	query_sql("ALTER TABLE `db_room_player_ranking` ADD COLUMN IF NOT EXISTS `reward_claimed` tinyint(1) NOT NULL DEFAULT 0 AFTER `total_branches`");
+	
+	// Check if it's the first day of the month and perform monthly reset
+	.@current_day = gettime(4); // Get current day
+	.@current_month = gettime(5); // Get current month
+	.@current_year = gettime(6); // Get current year
+	
+	// If it's the 1st day of the month, call the monthly reset function
+	if (.@current_day == 1) {
+		callfunc "F_MonthlyReset";
+	}
+	end;
+} 
+
+
+// Mapflags for new_1-1 (PvP room with branch usage allowed)
+new_1-1	mapflag	pvp	on
+new_1-1	mapflag	nobranch	off
+new_1-1	mapflag	nosave
+new_1-1	mapflag	noteleport
+new_1-1	mapflag	nomemo
+new_1-1	mapflag	nopenalty
+
+

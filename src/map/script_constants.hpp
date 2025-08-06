@@ -597,6 +597,8 @@
 	export_parameter(PCDIECOUNTER_VAR, SP_PCDIECOUNTER);
 	export_parameter(COOKMASTERY_VAR, SP_COOKMASTERY);
 	export_parameter(ACHIEVEMENTLEVEL, SP_ACHIEVEMENT_LEVEL);
+	export_parameter("ItemID",SP_ITEMID);
+	export_parameter("ItemIndex",SP_ITEMINDEX);
 
 	export_constant2("bMaxHP",SP_MAXHP);
 	export_constant2("bMaxSP",SP_MAXSP);

@@ -269,6 +269,7 @@ struct Script_Config script_config = {
 	"OnPCBaseLvUpEvent", //baselvup_event_name
 	"OnPCJobLvUpEvent", //joblvup_event_name
 	"OnPCIdentifyEvent", //identify_event_name
+	"OnItemUseEvent", //itemuse_event_name
 	// NPC related
 	"OnTouch_",	//ontouch_event_name (runs on first visible char to enter area, picks another char if the first char leaves)
 	"OnTouch",	//ontouch2_event_name (run whenever a char walks into the OnTouch area)
@@ -8187,6 +8188,34 @@ BUILDIN_FUNC(setitemdroprate) {
 		return SCRIPT_CMD_FAILURE;
 	}
 
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * getitemid() - Returns the ID of the item being used in OnItemUseEvent
+ *------------------------------------------*/
+BUILDIN_FUNC(getitemid)
+{
+	map_session_data *sd;
+
+	if (!script_rid2sd(sd))
+		return SCRIPT_CMD_FAILURE;
+
+	script_pushint(st, sd->itemid);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * getitemindex() - Returns the index of the item being used in OnItemUseEvent
+ *------------------------------------------*/
+BUILDIN_FUNC(getitemindex)
+{
+	map_session_data *sd;
+
+	if (!script_rid2sd(sd))
+		return SCRIPT_CMD_FAILURE;
+
+	script_pushint(st, sd->itemindex);
 	return SCRIPT_CMD_SUCCESS;
 }
 
@@ -28178,6 +28207,8 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(block,"i"), // Account Protection
 	BUILDIN_DEF(blockcheck,""), // Account Protection
 	BUILDIN_DEF(setitemdroprate, "ii"),
+	BUILDIN_DEF(getitemid, ""),
+	BUILDIN_DEF(getitemindex, ""),
 	BUILDIN_DEF2(grouprandomitem,"groupranditem","i?"),
 	BUILDIN_DEF(makeitem,"visii?"),
 	BUILDIN_DEF(makeitem2,"visiiiiiiiii?"),

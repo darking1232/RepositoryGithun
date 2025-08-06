@@ -166,8 +166,9 @@ struct Script_Config {
 	const char *logout_event_name;
 	const char *loadmap_event_name;
 	const char *baselvup_event_name;
-	const char *joblvup_event_name;
-	const char *identify_event_name;
+			const char *joblvup_event_name;
+		const char *identify_event_name;
+		const char *itemuse_event_name;
 
 	// NPC related
 	const char* ontouch_event_name;

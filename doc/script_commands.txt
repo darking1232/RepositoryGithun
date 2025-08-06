@@ -11930,3 +11930,274 @@ Spawn a costume version of an <item id> or <"item name"> in attached player's in
 
 ---------------------------------------
 
+
+
+# rAthena Custom Script Commands Documentation
+
+## Overview
+This document contains documentation for custom script commands that have been added to the rAthena server for the Dead Branch PvP Room system. These functions are not part of the standard rAthena distribution and require source code modification to function.
+
+## Custom Functions
+
+### getitemid()
+
+#### Syntax
+```c
+getitemid()
+```
+
+#### Description
+Returns the ID of the item being used in the `OnItemUseEvent`. This function accesses the `sd->itemid` value from the session data and is specifically designed to work with the custom `OnItemUseEvent` handler.
+
+#### Return Value
+- **Type**: Integer
+- **Range**: Valid item ID numbers (e.g., 604 for Dead Branch, 605 for Bloody Branch)
+- **Error**: Returns 0 if no valid session data
+
+#### Usage Example
+```c
+OnItemUseEvent:
+    .@item_id = getitemid();
+    if (.@item_id == 604) {
+        dispbottom "Dead Branch used!";
+        callfunc "F_TrackBranchUsage", .@char_id, .@account_id, .@player_name$, 1;
+    }
+    end;
+```
+
+#### Implementation Details
+```cpp
+/*==========================================
+ * getitemid() - Returns the ID of the item being used in OnItemUseEvent
+ *------------------------------------------*/
+BUILDIN_FUNC(getitemid)
+{
+    map_session_data *sd;
+
+    if (!script_rid2sd(sd))
+        return SCRIPT_CMD_FAILURE;
+
+    script_pushint(st, sd->itemid);
+    return SCRIPT_CMD_SUCCESS;
+}
+```
+
+#### Source Code Integration
+Add to `src/map/script.cpp`:
+
+1. **Function Declaration** (in BUILDIN_DEF table):
+```cpp
+BUILDIN_DEF(getitemid, ""),
+```
+
+2. **Function Implementation** (add the complete function as shown above)
+
+#### Compilation Requirements
+- Requires rAthena source code modification
+- Must be compiled after adding the function to `script.cpp`
+- Function is only available after server restart
+
+#### Error Handling
+- Validates session data exists
+- Returns `SCRIPT_CMD_FAILURE` if no valid session
+- Prevents server crashes from invalid data
+
+#### Performance Considerations
+- Lightweight function with minimal overhead
+- Direct access to session data
+- No database queries or complex operations
+
+---
+
+### getitemindex()
+
+#### Syntax
+```c
+getitemindex()
+```
+
+#### Description
+Returns the index of the item being used in the `OnItemUseEvent`. This function accesses the `sd->itemindex` value from the session data and is specifically designed to work with the custom `OnItemUseEvent` handler.
+
+#### Return Value
+- **Type**: Integer
+- **Range**: Valid item index numbers
+- **Error**: Returns 0 if no valid session data
+
+#### Usage Example
+```c
+OnItemUseEvent:
+    .@item_index = getitemindex();
+    dispbottom "Item index: " + .@item_index;
+    
+    // Use with getitemid() for complete item information
+    .@item_id = getitemid();
+    dispbottom "Item ID: " + .@item_id + " | Index: " + .@item_index;
+    end;
+```
+
+#### Implementation Details
+```cpp
+/*==========================================
+ * getitemindex() - Returns the index of the item being used in OnItemUseEvent
+ *------------------------------------------*/
+BUILDIN_FUNC(getitemindex)
+{
+    map_session_data *sd;
+
+    if (!script_rid2sd(sd))
+        return SCRIPT_CMD_FAILURE;
+
+    script_pushint(st, sd->itemindex);
+    return SCRIPT_CMD_SUCCESS;
+}
+```
+
+#### Source Code Integration
+Add to `src/map/script.cpp`:
+
+1. **Function Declaration** (in BUILDIN_DEF table):
+```cpp
+BUILDIN_DEF(getitemindex, ""),
+```
+
+2. **Function Implementation** (add the complete function as shown above)
+
+#### Compilation Requirements
+- Requires rAthena source code modification
+- Must be compiled after adding the function to `script.cpp`
+- Function is only available after server restart
+
+#### Error Handling
+- Validates session data exists
+- Returns `SCRIPT_CMD_FAILURE` if no valid session
+- Prevents server crashes from invalid data
+
+#### Performance Considerations
+- Lightweight function with minimal overhead
+- Direct access to session data
+- No database queries or complex operations
+
+---
+
+## Integration with OnItemUseEvent
+
+### Complete Usage Example
+```c
+-	script	ItemUseEventTracker	-1,{
+OnItemUseEvent:
+    // Get player information
+    .@player_name$ = strcharinfo(0);
+    .@map_name$ = strcharinfo(3);
+    .@char_id = getcharid(0);
+    .@account_id = getcharid(3);
+    
+    // Get item information using custom functions
+    .@item_id = getitemid();
+    .@item_index = getitemindex();
+    
+    // Handle specific items
+    if (.@map_name$ == "new_1-1") {
+        if (.@item_id == 604) {
+            // Dead Branch used
+            callfunc "F_TrackBranchUsage", .@char_id, .@account_id, .@player_name$, 1;
+        } else if (.@item_id == 605) {
+            // Bloody Branch used
+            callfunc "F_TrackBranchUsage", .@char_id, .@account_id, .@player_name$, 2;
+        }
+    }
+    end;
+}
+```
+
+### Event Flow
+```
+Player uses item ? OnItemUseEvent fires ? getitemid()/getitemindex() called ? Process item data
+```
+
+### Common Item IDs
+| Item Name | Item ID | Description |
+|-----------|---------|-------------|
+| Dead Branch | 604 | Summons random monster |
+| Bloody Branch | 605 | Summons random monster (different pool) |
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. Functions Not Available
+**Problem**: `getitemid()` or `getitemindex()` not recognized
+**Solution**: 
+- Ensure source code modifications are compiled
+- Restart server after compilation
+- Check function declarations in BUILDIN_DEF table
+
+#### 2. Wrong Return Values
+**Problem**: Functions returning 0 or incorrect values
+**Solution**:
+- Verify OnItemUseEvent is properly declared
+- Check session data validity
+- Ensure functions are called within OnItemUseEvent context
+
+#### 3. Compilation Errors
+**Problem**: Build fails after adding functions
+**Solution**:
+- Check syntax in function implementations
+- Verify BUILDIN_DEF table entries
+- Ensure proper includes and dependencies
+
+### Debug Commands
+```c
+// Add debug output to verify function calls
+dispbottom "[Debug] getitemid() called";
+dispbottom "[Debug] Item ID: " + getitemid();
+dispbottom "[Debug] Item Index: " + getitemindex();
+```
+
+---
+
+## Version History
+
+### v1.0 (Current)
+- Initial implementation of `getitemid()` and `getitemindex()`
+- OnItemUseEvent integration
+- Dead Branch PvP Room system support
+- Complete error handling and validation
+
+### Future Enhancements
+- Additional item information functions
+- Enhanced error reporting
+- Performance optimizations
+- Extended item type support
+
+---
+
+## Related Files
+
+### Source Files
+- `src/map/script.cpp` - Function implementations
+
+### Script Files
+- `npc/custom/db_room.txt` - Usage examples
+
+### Documentation
+- `OnItemUseEvent_Documentation.md` - Event handler documentation
+- `README.md` - System overview
+
+---
+
+## Support
+
+For issues or questions regarding these functions:
+1. Check server logs for error messages
+2. Verify source code modifications are correct
+3. Ensure proper compilation and restart
+4. Test with debug output enabled
+
+---
+
+**Note**: These functions are custom implementations specific to this rAthena server setup. They are not part of the standard rAthena distribution and require source code modification to function. 
+
+

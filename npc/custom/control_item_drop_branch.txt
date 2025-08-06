@@ -1,0 +1,76 @@
+prontera,200,300,4	script	BranchMonitor	811,{
+
+	OnInit:
+		// ? Display NPC using sprite ID (1104 = Kafra)
+		setnpcdisplay("BranchMonitor", 1104);
+
+		// ? Create the override table if needed
+		query_sql("CREATE TABLE IF NOT EXISTS drop_rate_overrides (item_id INT PRIMARY KEY, override_rate INT NOT NULL, circulating_count INT NOT NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)");
+
+		// ? List of monitored cards
+		setarray .card_ids[0], 604,12103;
+
+		// ? Drop rate config
+		set .threshold, 500;         // Trigger threshold
+		set .original_rate, 1000;     // 10.00%
+		set .reduced_rate, 1;        // 0.01%
+
+		// ? Apply saved drop overrides on startup
+		for (.@i = 0; .@i < getarraysize(.card_ids); .@i++) {
+			query_sql("SELECT override_rate FROM drop_rate_overrides WHERE item_id = " + .card_ids[.@i], .@rate);
+			if (.@rate)
+				setitemdroprate(.card_ids[.@i], .@rate);
+		}
+
+		// ? Start 6 hours loop
+		initnpctimer;
+		end;
+
+	//OnTimer21600000:
+	OnTimer21600000:
+		callsub OnCheckDrop;
+		initnpctimer;
+		end;
+
+	OnCheckDrop:
+		for (.@i = 0; .@i < getarraysize(.card_ids); .@i++) {
+			set .@card_id, .card_ids[.@i];
+			set .@total, 0;
+
+			// ? Total card count across all inventories
+			query_sql("SELECT IFNULL(SUM(amount),0) FROM inventory WHERE nameid = " + .@card_id, .@a); .@total += .@a;
+			query_sql("SELECT IFNULL(SUM(amount),0) FROM cart_inventory WHERE nameid = " + .@card_id, .@a); .@total += .@a;
+			query_sql("SELECT IFNULL(SUM(amount),0) FROM storage WHERE nameid = " + .@card_id, .@a); .@total += .@a;
+			query_sql("SELECT IFNULL(SUM(amount),0) FROM guild_storage WHERE nameid = " + .@card_id, .@a); .@total += .@a;
+
+			if (.@total >= .threshold) {
+				setitemdroprate(.@card_id, .reduced_rate);
+				query_sql("REPLACE INTO drop_rate_overrides (item_id, override_rate, circulating_count) VALUES (" + .@card_id + ", " + .reduced_rate + ", " + .@total + ")");
+				//announce "[" + getitemname(.@card_id) + "] drop rate lowered to 0.01% (Circulating: " + .@total + ")", bc_all;
+			} else {
+				setitemdroprate(.@card_id, .original_rate);
+				query_sql("DELETE FROM drop_rate_overrides WHERE item_id = " + .@card_id);
+				//announce "[" + getitemname(.@card_id) + "] drop rate restored to 1.00% (Circulating: " + .@total + ")", bc_all;
+			}
+		}
+		return;
+
+	OnWhisperGlobal:
+	if (getgmlevel() < 99) {
+		dispbottom "[Drop Rate Monitor] Only GM level 99 can use this function.";
+		end;
+	}
+		query_sql("SELECT item_id, circulating_count FROM drop_rate_overrides", .@id, .@qty);
+
+		if (getarraysize(.@id) == 0) {
+			dispbottom "[Drop Rate Monitor] No cards currently have reduced drop rates.";
+			end;
+		}
+
+		dispbottom "[Drop Rate Monitor] Currently reduced drop rate cards:";
+		for (.@i = 0; .@i < getarraysize(.@id); .@i++) {
+			dispbottom " - " + getitemname(.@id[.@i]) + " [" + .@id[.@i] + "] : " + .@qty[.@i] + " pcs";
+		}
+		end;
+}
+

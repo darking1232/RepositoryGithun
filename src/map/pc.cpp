@@ -6500,6 +6500,9 @@ int32 pc_useitem(map_session_data *sd,int32 n)
 	sd->itemindex = n;
 	amount = item.amount;
 	script = id->script;
+	
+	// Trigger OnItemUseEvent for all scripts
+	npc_script_event(*sd, NPCE_ITEMUSE);
 	//Check if the item is to be consumed immediately [Skotlex]
 	if (id->flag.delay_consume > 0)
 		clif_useitemack(sd, n, amount, true);
@@ -10258,6 +10261,8 @@ int64 pc_readparam(map_session_data* sd,int64 type)
 		case SP_PCDIECOUNTER:    val = sd->die_counter; break;
 		case SP_COOKMASTERY:     val = sd->cook_mastery; break;
 		case SP_ACHIEVEMENT_LEVEL: val = sd->achievement_data.level; break;
+		case SP_ITEMID:          val = sd->itemid; break;
+		case SP_ITEMINDEX:       val = sd->itemindex; break;
 		case SP_CRITICAL:        val = sd->battle_status.cri/10; break;
 		case SP_ASPD:            val = (AMOTION_ZERO_ASPD-sd->battle_status.amotion)/AMOTION_INTERVAL; break;
 		case SP_BASE_ATK:
@@ -10642,6 +10647,12 @@ bool pc_setparam(map_session_data *sd,int64 type,int64 val_tmp)
 		val = cap_value(val, 0, 1999);
 		sd->cook_mastery = val;
 		pc_setglobalreg(sd, add_str(COOKMASTERY_VAR), sd->cook_mastery);
+		return true;
+	case SP_ITEMID:
+		sd->itemid = val;
+		return true;
+	case SP_ITEMINDEX:
+		sd->itemindex = val;
 		return true;
 	default:
 		ShowError("pc_setparam: Attempted to set unknown parameter '%lld'.\n", type);
