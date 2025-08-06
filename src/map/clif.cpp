@@ -16188,6 +16188,10 @@ void clif_Mail_refreshinbox(map_session_data *sd,enum mail_inbox_type type,int64
 /// 0ac0 <mail id>.Q <unknown>.16B (CZ_OPEN_MAILBOX2)
 /// 0ac1 <mail id>.Q <unknown>.16B (CZ_REQ_REFRESH_MAIL_LIST2)
 void clif_parse_Mail_refreshinbox(int32 fd, map_session_data *sd){
+	// BLOCK MAIL INBOX REFRESH
+	clif_displaymessage(sd->fd, "Mail system is disabled on this server.");
+	return;
+
 	if( mail_invalid_operation( sd ) ){
 		return;
 	}
@@ -16370,6 +16374,10 @@ void clif_Mail_read( map_session_data *sd, int32 mail_id ){
 /// 0241 <mail id>.L (CZ_MAIL_OPEN)
 /// 09ea <mail tab>.B <mail id>.Q (CZ_REQ_READ_MAIL)
 void clif_parse_Mail_read(int32 fd, map_session_data *sd){
+	// BLOCK MAIL READING
+	clif_displaymessage(sd->fd, "Mail system is disabled on this server.");
+	return;
+
 #if PACKETVER < 20150513
 	int32 mail_id = RFIFOL(fd,packet_db[RFIFOW(fd,0)].pos[0]);
 #else
@@ -16399,6 +16407,10 @@ void clif_send_Mail_beginwrite_ack( map_session_data *sd, char* name, bool succe
 /// Request to start writing a mail
 /// 0a08 <receiver>.24B (CZ_REQ_OPEN_WRITE_MAIL)
 void clif_parse_Mail_beginwrite( int32 fd, map_session_data *sd ){
+	// BLOCK MAIL WRITING INTERFACE
+	clif_displaymessage(sd->fd, "Mail system is disabled on this server.");
+	return;
+
 	char name[NAME_LENGTH];
 
 	safestrncpy(name, RFIFOCP(fd, 2), NAME_LENGTH);
@@ -16445,6 +16457,10 @@ void clif_Mail_Receiver_Ack( map_session_data* sd, uint32 char_id, int16 class_,
 /// Request information about the recipient
 /// 0a13 <name>.24B (CZ_CHECK_RECEIVE_CHARACTER_NAME)
 void clif_parse_Mail_Receiver_Check(int32 fd, map_session_data *sd) {
+	// BLOCK MAIL RECEIVER CHECK
+	clif_displaymessage(sd->fd, "Mail system is disabled on this server.");
+	return;
+
 #if PACKETVER >= 20140423
 #if PACKETVER_MAIN_NUM >= 20201104 || PACKETVER_RE_NUM >= 20211103 || PACKETVER_ZERO_NUM >= 20201118
 	const PACKET_CZ_CHECKNAME2* p = reinterpret_cast<PACKET_CZ_CHECKNAME2*>( RFIFOP( fd, 0 ) );
@@ -16468,6 +16484,10 @@ void clif_parse_Mail_Receiver_Check(int32 fd, map_session_data *sd) {
 /// 09f1 <mail id>.Q <mail tab>.B (CZ_REQ_ZENY_FROM_MAIL)
 /// 09f3 <mail id>.Q <mail tab>.B (CZ_REQ_ITEM_FROM_MAIL)
 void clif_parse_Mail_getattach( int32 fd, map_session_data *sd ){
+	// BLOCK MAIL ATTACHMENT RETRIEVAL
+	clif_displaymessage(sd->fd, "Mail system is disabled on this server.");
+	return;
+
 	int32 i;
 	struct mail_message* msg;
 #if PACKETVER < 20150513
@@ -16574,6 +16594,10 @@ void clif_parse_Mail_getattach( int32 fd, map_session_data *sd ){
 /// 0243 <mail id>.L (CZ_MAIL_DELETE)
 /// 09f5 <mail tab>.B <mail id>.Q (CZ_REQ_DELETE_MAIL)
 void clif_parse_Mail_delete(int32 fd, map_session_data *sd){
+	// BLOCK MAIL DELETION
+	clif_displaymessage(sd->fd, "Mail system is disabled on this server.");
+	return;
+
 #if PACKETVER < 20150513
 	int32 mail_id = RFIFOL(fd,packet_db[RFIFOW(fd,0)].pos[0]);
 #else
@@ -16618,6 +16642,10 @@ void clif_parse_Mail_delete(int32 fd, map_session_data *sd){
 /// Request to return a mail.
 /// 0273 <mail id>.L <receive name>.24B (CZ_REQ_MAIL_RETURN)
 void clif_parse_Mail_return(int32 fd, map_session_data *sd){
+	// BLOCK MAIL RETURN
+	clif_displaymessage(sd->fd, "Mail system is disabled on this server.");
+	return;
+
 #if PACKETVER_MAIN_NUM >= 20201104 || PACKETVER_RE_NUM >= 20211103 || PACKETVER_ZERO_NUM >= 20201118
 	const PACKET_CZ_RODEX_RETURN* p = reinterpret_cast<PACKET_CZ_RODEX_RETURN*>( RFIFOP( fd, 0 ) );
 
@@ -16650,6 +16678,10 @@ void clif_parse_Mail_return(int32 fd, map_session_data *sd){
 /// 0247 <index>.W <amount>.L (CZ_MAIL_ADD_ITEM)
 /// 0a04 <index>.W <amount>.W (CZ_REQ_ADD_ITEM_TO_MAIL)
 void clif_parse_Mail_setattach(int32 fd, map_session_data *sd){
+	// BLOCK MAIL ATTACHMENT
+	clif_displaymessage(sd->fd, "Mail system is disabled on this server.");
+	return;
+
 	struct s_packet_db* info = &packet_db[RFIFOW(fd,0)];
 	uint16 idx = RFIFOW(fd,info->pos[0]);
 #if PACKETVER < 20150513
@@ -16712,6 +16744,10 @@ void clif_mail_removeitem( map_session_data* sd, bool success, int32 index, int3
 /// 0a06 <index>.W <amount>.W (CZ_REQ_REMOVE_ITEM_MAIL)
 void clif_parse_Mail_winopen(int32 fd, map_session_data *sd)
 {
+	// BLOCK MAIL WINDOW OPERATIONS
+	clif_displaymessage(sd->fd, "Mail system is disabled on this server.");
+	return;
+
 #if PACKETVER < 20150513
 	int32 type = RFIFOW(fd,packet_db[RFIFOW(fd,0)].pos[0]);
 
@@ -16732,6 +16768,11 @@ void clif_parse_Mail_winopen(int32 fd, map_session_data *sd)
 /// 09ec <packet len>.W <recipient>.24B <sender>.24B <zeny>.Q <title length>.W <body length>.W <title>.?B <body>.?B (CZ_REQ_WRITE_MAIL)
 /// 0a6e <packet len>.W <recipient>.24B <sender>.24B <zeny>.Q <title length>.W <body length>.W <char id>.L <title>.?B <body>.?B (CZ_REQ_WRITE_MAIL2)
 void clif_parse_Mail_send(int32 fd, map_session_data *sd){
+	// BLOCK ALL MAIL FUNCTIONALITY
+	clif_displaymessage(sd->fd, "Mail system is disabled on this server.");
+	clif_Mail_send(sd, WRITE_MAIL_FAILED);
+	return;
+
 #if PACKETVER < 20150513
 	struct s_packet_db* info = &packet_db[RFIFOW(fd,0)];
 
