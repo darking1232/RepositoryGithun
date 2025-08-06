@@ -1,0 +1,9 @@
+-	script	arriving	-1,{
+OnPCLoginEvent:
+if ( !#new_account ) {
+announce "-- Welcome '"+strcharinfo(0)+"' to Revise RO!",bc,0x33FF33;
+#new_account = 1;
+}
+else
+end;
+}

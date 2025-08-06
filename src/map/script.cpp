@@ -13275,6 +13275,7 @@ BUILDIN_FUNC(changebase)
 /**
  * costume_changebase - Visual-only appearance change that doesn't affect skills
  * costume_changebase(<job ID number>{,<account ID>});
+ * costume_changebase(0{,<account ID>}); // Restore original appearance
  */
 BUILDIN_FUNC(costume_changebase)
 {
@@ -13296,8 +13297,19 @@ BUILDIN_FUNC(costume_changebase)
 	// Store original class for restoration
 	uint16 original_class = sd->class_;
 	
-	// Change to target class for appearance only
-	if(!sd->disguise && vclass != sd->vd.look[LOOK_BASE]) {
+	// Handle restoration (job ID 0) or change to target class for appearance only
+	if(vclass == 0) {
+		// Restore original appearance
+		status_set_viewdata(sd, sd->status.class_);
+		clif_changelook(sd,LOOK_BASE,sd->vd.look[LOOK_BASE]);
+		clif_changelook(sd,LOOK_WEAPON,sd->status.weapon);
+		if (sd->vd.look[LOOK_CLOTHES_COLOR])
+			clif_changelook(sd,LOOK_CLOTHES_COLOR,sd->vd.look[LOOK_CLOTHES_COLOR]);
+		if (sd->vd.look[LOOK_BODY2])
+			clif_changelook(sd,LOOK_BODY2,sd->vd.look[LOOK_BODY2]);
+		
+		// Don't call clif_skillinfoblock to preserve skill display
+	} else if(!sd->disguise && vclass != sd->vd.look[LOOK_BASE]) {
 		status_set_viewdata(sd, vclass);
 		//Updated client view. Base, Weapon and Cloth Colors.
 		clif_changelook(sd,LOOK_BASE,sd->vd.look[LOOK_BASE]);
