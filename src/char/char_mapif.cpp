@@ -1033,7 +1033,7 @@ int32 chmapif_parse_reqauth(int32 fd, int32 id){
 		}
 
 		if( global_core->is_running() && autotrade && cd ){
-			uint16 mmo_charstatus_len = sizeof(struct mmo_charstatus) + 25;
+			uint16 mmo_charstatus_len = sizeof(struct mmo_charstatus) + 42; // +17 for MAC address
 
 			WFIFOHEAD(fd,mmo_charstatus_len);
 			WFIFOW(fd,0) = 0x2afd;
@@ -1044,7 +1044,8 @@ int32 chmapif_parse_reqauth(int32 fd, int32 id){
 			WFIFOL(fd,16) = 0;
 			WFIFOL(fd,20) = 0;
 			WFIFOB(fd,24) = 0;
-			memcpy( WFIFOP( fd, 25 ), cd.get(), sizeof(struct mmo_charstatus));
+			memset( WFIFOP( fd, 25 ), 0, 17 ); // Empty MAC address for autotrade
+			memcpy( WFIFOP( fd, 42 ), cd.get(), sizeof(struct mmo_charstatus));
 			WFIFOSET(fd, WFIFOW(fd,2));
 
 			char_set_char_online(id, char_id, account_id);
@@ -1060,7 +1061,7 @@ int32 chmapif_parse_reqauth(int32 fd, int32 id){
 #endif
 			)
 		{// auth ok
-			uint16 mmo_charstatus_len = sizeof(struct mmo_charstatus) + 25;
+			uint16 mmo_charstatus_len = sizeof(struct mmo_charstatus) + 42; // +17 for MAC address
 
 			WFIFOHEAD(fd,mmo_charstatus_len);
 			WFIFOW(fd,0) = 0x2afd;
@@ -1071,7 +1072,8 @@ int32 chmapif_parse_reqauth(int32 fd, int32 id){
 			WFIFOL(fd,16) = (uint32)node->expiration_time; // FIXME: will wrap to negative after "19-Jan-2038, 03:14:07 AM GMT"
 			WFIFOL(fd,20) = node->group_id;
 			WFIFOB(fd,24) = node->changing_mapservers;
-			memcpy( WFIFOP( fd, 25 ), cd.get(), sizeof( struct mmo_charstatus ) );
+			safestrncpy( (char*)WFIFOP( fd, 25 ), node->mac_address, 17 ); // MAC address
+			memcpy( WFIFOP( fd, 42 ), cd.get(), sizeof( struct mmo_charstatus ) );
 			WFIFOSET(fd, WFIFOW(fd,2));
 
 			// only use the auth once and mark user online

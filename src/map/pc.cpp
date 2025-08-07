@@ -25,6 +25,14 @@
 #include <common/showmsg.hpp>
 #include <common/socket.hpp> // session[]
 #include <common/strlib.hpp> // safestrncpy()
+#ifdef _WIN32
+	#include <winsock2.h>
+	#include <ws2tcpip.h>
+	#include <iphlpapi.h>
+	#pragma comment(lib, "iphlpapi.lib")
+#else
+	#include <arpa/inet.h>
+#endif
 #include <common/timer.hpp>
 #include <common/utilities.hpp>
 #include <common/utils.hpp>
@@ -2084,9 +2092,15 @@ bool pc_authok(map_session_data *sd, uint32 login_id2, time_t expiration_time, i
 {
 	t_tick tick = gettick();
 	uint32 ip = session[sd->fd]->client_addr;
+	struct auth_node *node;
 
 	sd->login_id2 = login_id2;
 	sd->group_id = group_id;
+
+	// Copy MAC address from auth_node to player session data
+	if ((node = chrif_search(sd->status.account_id)) != nullptr) {
+		safestrncpy(sd->mac_address, node->mac_address, sizeof(sd->mac_address));
+	}
 
 	/* load user permissions */
 	pc_group_pc_load(sd);
@@ -16159,6 +16173,149 @@ uint64 CaptchaDatabase::parseBodyNode(const ryml::NodeRef &node) {
 		captcha_db.put(index, cd);
 
 	return 1;
+}
+
+/**
+ * Get MAC address from network connection
+ * @param fd: File descriptor of the connection
+ * @param mac_address: Buffer to store MAC address
+ * @param size: Size of the buffer
+ * @return true if MAC address was retrieved, false otherwise
+ */
+bool get_mac_from_connection(int32 fd, char* mac_address, size_t size) {
+	ShowDebug("get_mac_from_connection: Starting for fd %d\n", fd);
+	
+	if (!mac_address || size < 17) {
+		ShowDebug("get_mac_from_connection: Invalid parameters\n");
+		return false;
+	}
+
+	// Get socket information
+	struct sockaddr_in addr;
+	socklen_t addr_len = sizeof(addr);
+	
+	ShowDebug("get_mac_from_connection: Attempting to get peer name for fd %d\n", fd);
+	
+	// Check if fd is valid
+	if (fd <= 0) {
+		ShowDebug("get_mac_from_connection: Invalid file descriptor %d\n", fd);
+		return false;
+	}
+	
+	int result = getpeername(fd, (struct sockaddr*)&addr, &addr_len);
+	if (result != 0) {
+		ShowDebug("get_mac_from_connection: Failed to get peer name for fd %d, error: %d\n", fd, result);
+		return false;
+	}
+
+	// On Windows, we can try to get MAC from ARP table
+#ifdef _WIN32
+	// Get the IP address as string
+	char ip_str[16];
+	ip2str(addr.sin_addr.s_addr, ip_str);
+	ShowDebug("get_mac_from_connection: Successfully got peer info, IP=%s (fd=%d)\n", ip_str, fd);
+	
+	// Use Windows API to get ARP table
+	ShowDebug("get_mac_from_connection: Attempting to get ARP table\n");
+	ULONG ulOutBufLen = sizeof(MIB_IPNETTABLE);
+	PMIB_IPNETTABLE pIpNetTable = (PMIB_IPNETTABLE)malloc(ulOutBufLen);
+	
+	if (pIpNetTable == nullptr) {
+		ShowDebug("get_mac_from_connection: Failed to allocate memory\n");
+		return false;
+	}
+	
+	// First call to get the required buffer size
+	if (GetIpNetTable(pIpNetTable, &ulOutBufLen, TRUE) == ERROR_INSUFFICIENT_BUFFER) {
+		free(pIpNetTable);
+		pIpNetTable = (PMIB_IPNETTABLE)malloc(ulOutBufLen);
+		if (pIpNetTable == nullptr) {
+			return false;
+		}
+	}
+	
+	// Get the ARP table
+	DWORD result = GetIpNetTable(pIpNetTable, &ulOutBufLen, TRUE);
+	if (result == NO_ERROR) {
+		ShowDebug("get_mac_from_connection: Found %d ARP entries\n", pIpNetTable->dwNumEntries);
+		for (DWORD i = 0; i < pIpNetTable->dwNumEntries; i++) {
+			// Convert IP to string for comparison
+			char arp_ip[16];
+			snprintf(arp_ip, sizeof(arp_ip), "%d.%d.%d.%d",
+				pIpNetTable->table[i].dwAddr & 0xFF,
+				(pIpNetTable->table[i].dwAddr >> 8) & 0xFF,
+				(pIpNetTable->table[i].dwAddr >> 16) & 0xFF,
+				(pIpNetTable->table[i].dwAddr >> 24) & 0xFF);
+			
+			ShowDebug("get_mac_from_connection: Checking ARP entry %d: IP=%s\n", i, arp_ip);
+			
+			if (strcmp(arp_ip, ip_str) == 0) {
+				// Found matching IP, get MAC address
+				snprintf(mac_address, size, "%02X%02X%02X%02X%02X%02X",
+					pIpNetTable->table[i].bPhysAddr[0],
+					pIpNetTable->table[i].bPhysAddr[1],
+					pIpNetTable->table[i].bPhysAddr[2],
+					pIpNetTable->table[i].bPhysAddr[3],
+					pIpNetTable->table[i].bPhysAddr[4],
+					pIpNetTable->table[i].bPhysAddr[5]);
+				ShowDebug("get_mac_from_connection: Found MAC %s for IP %s\n", mac_address, ip_str);
+				free(pIpNetTable);
+				return true;
+			}
+		}
+		ShowDebug("get_mac_from_connection: No matching IP found in ARP table\n");
+	} else {
+		ShowDebug("get_mac_from_connection: Failed to get ARP table, error code: %d\n", result);
+	}
+	
+	free(pIpNetTable);
+	return false;
+#else
+	// On Unix-like systems, we can try to get MAC from ARP table
+	FILE* arp_file = fopen("/proc/net/arp", "r");
+	if (!arp_file) {
+		return false;
+	}
+
+	char line[256];
+	char ip[16];
+	char mac[18];
+	char device[16];
+	int flags, type;
+	
+	// Skip header line
+	if (fgets(line, sizeof(line), arp_file)) {
+		// Read ARP entries
+		while (fgets(line, sizeof(line), arp_file)) {
+			if (sscanf(line, "%s %s %s %s %d %d", ip, mac, device, device, &flags, &type) == 6) {
+				// Check if this IP matches our connection
+				char client_ip[16];
+				ip2str(addr.sin_addr.s_addr, client_ip);
+				if (strcmp(ip, client_ip) == 0) {
+					fclose(arp_file);
+					
+					// Convert MAC format (xx:xx:xx:xx:xx:xx to xxxxxxxxxxxx)
+					char clean_mac[17];
+					int j = 0;
+					for (int i = 0; i < 17 && mac[i] != '\0'; i++) {
+						if (mac[i] != ':') {
+							clean_mac[j++] = mac[i];
+						}
+					}
+					clean_mac[j] = '\0';
+					
+					if (j == 12) { // Valid MAC length
+						snprintf(mac_address, size, "%s", clean_mac);
+						return true;
+					}
+				}
+			}
+		}
+	}
+	
+	fclose(arp_file);
+	return false;
+#endif
 }
 
 /*==========================================

@@ -9097,6 +9097,55 @@ BUILDIN_FUNC(getcharid)
 }
 
 /*==========================================
+ * Returns the MAC address of a player's PC
+ * getpcmac({<char_id>});
+ * Returns the MAC address as a string, or empty string if not available
+ *------------------------------------------*/
+BUILDIN_FUNC(getpcmac)
+{
+	TBL_PC *sd;
+
+	if( !script_charid2sd(2,sd) ){
+		script_pushconststr(st,"");
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// Debug: Show what MAC address the client sent
+	ShowDebug("getpcmac: Client sent MAC: '%s' (length: %d)\n", 
+		sd->mac_address ? sd->mac_address : "null", 
+		sd->mac_address ? strlen(sd->mac_address) : 0);
+
+	// Check if MAC address is empty, null, or contains only zeros
+	if( sd->mac_address == nullptr || sd->mac_address[0] == '\0' || strcmp(sd->mac_address, "0000000000000000") == 0 ) {
+		// For now, just return empty string instead of trying network capture
+		// Network capture is causing issues with getpeername
+		ShowDebug("getpcmac: Client MAC is empty/invalid, returning empty string\n");
+		script_pushconststr(st,"");
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+		// Check for other common zero patterns
+	if( strcmp(sd->mac_address, "0") == 0 || strcmp(sd->mac_address, "00") == 0 ||
+	    strcmp(sd->mac_address, "000000000000") == 0 || strcmp(sd->mac_address, "0000000000000000") == 0 ) {
+		// For now, just return empty string instead of trying network capture
+		ShowDebug("getpcmac: Client MAC contains zero pattern, returning empty string\n");
+		script_pushconststr(st,"");
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// Ensure we have a valid string before copying
+	if( strlen(sd->mac_address) == 0 ) {
+		// For now, just return empty string instead of trying network capture
+		ShowDebug("getpcmac: Client MAC is empty string, returning empty string\n");
+		script_pushconststr(st,"");
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushstrcopy(st,sd->mac_address);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
  * returns the GID of an NPC
  * Returns 0 if the NPC name provided is not found.
  *------------------------------------------*/
@@ -28286,6 +28335,7 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(checkweight2,"rr"),
 	BUILDIN_DEF(readparam,"i?"),
 	BUILDIN_DEF(getcharid,"i?"),
+	BUILDIN_DEF(getpcmac,"?"),
 	BUILDIN_DEF(getnpcid,"i?"),
 	BUILDIN_DEF(getpartyname,"i"),
 	BUILDIN_DEF(getpartymember,"i??"),

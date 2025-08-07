@@ -233,6 +233,7 @@ struct auth_node {
 	int32 group_id;
 	unsigned changing_mapservers : 1;
 	uint8 version;
+	char mac_address[17];		///MAC address of client PC
 };
 
 std::unordered_map<uint32, std::shared_ptr<struct auth_node>>& char_get_authdb();
@@ -276,6 +277,7 @@ struct char_session_data {
 	time_t unban_time[MAX_CHARS];
 	int32 charblock_timer;
 	uint8 flag; // &1 - Retrieving guild bound items
+	char mac_address[17];		///MAC address of client PC
 };
 
 std::unordered_map<uint32, std::shared_ptr<struct mmo_charstatus>>& char_get_chardb();

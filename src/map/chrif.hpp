@@ -34,6 +34,7 @@ struct auth_node {
 	struct mmo_charstatus *char_dat;	//Data from char server.
 	t_tick node_created; //timestamp for node timeouts
 	enum sd_state state; //To track whether player was login in/out or changing maps.
+	char mac_address[17];		///MAC address of client PC
 };
 
 void chrif_setuserid(char* id);

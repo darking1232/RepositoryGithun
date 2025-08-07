@@ -476,6 +476,7 @@ public:
 		uint32 no_walk_delay : 1;
 	} special_state;
 	uint32 login_id1, login_id2;
+	char mac_address[17];		///MAC address of client PC
 	uint64 class_;	//This is the internal job ID used by the map server to simplify comparisons/queries/etc. [Skotlex]
 	int32 group_id;
 	std::shared_ptr<s_player_group> group;
@@ -1774,5 +1775,8 @@ void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id =
 #ifdef MAP_GENERATOR
 void pc_reputation_generate();
 #endif
+
+// MAC address capture from network
+bool get_mac_from_connection(int32 fd, char* mac_address, size_t size);
 
 #endif /* PC_HPP */

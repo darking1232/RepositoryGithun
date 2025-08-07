@@ -1,0 +1,109 @@
+//===========================================================================
+// Simple MAC Address Demo
+// Basic demonstration of getpcmac() function
+//===========================================================================
+
+prontera,167,186,4	script	Simple MAC Demo	4_F_01,{
+	dispbottom "[Simple MAC Demo]";
+	dispbottom "This is a simple demonstration of the getpcmac() function.";
+	dispbottom " ";
+	
+	// Get the player's MAC address
+	.mac$ = getpcmac();
+	
+	// Debug: Show the type and value
+	dispbottom "Debug Info:";
+	dispbottom "MAC value: '" + .mac$ + "'";
+	dispbottom "MAC length: " + getstrlen(.mac$);
+	dispbottom " ";
+	
+	// Test different comparison methods
+	dispbottom "Testing comparisons:";
+	dispbottom "strcmp(.mac$, '') == 0: " + (strcmp(.mac$, "") == 0);
+	dispbottom "getstrlen(.mac$) == 0: " + (getstrlen(.mac$) == 0);
+	dispbottom " ";
+	
+	// Alternative approach: store MAC in a string variable
+	.mac_str$ = .mac$;
+	dispbottom "MAC as string: '" + .mac_str$ + "'";
+	dispbottom " ";
+	
+	// MAC address should now always be available
+	if (getstrlen(.mac$) == 0) {
+		dispbottom "MAC address not available.";
+		dispbottom " ";
+		dispbottom "This can happen when:";
+		dispbottom "- Client doesn't send MAC address";
+		dispbottom "- Network doesn't provide MAC info";
+		dispbottom "- Using older client version";
+		dispbottom " ";
+		dispbottom "The server will try to get the";
+		dispbottom "real MAC address from your network";
+		dispbottom "connection when possible.";
+		dispbottom " ";
+		dispbottom "Check server console/logs for debug messages!";
+	} else {
+		dispbottom "Your MAC address is: " + .mac$;
+		dispbottom " ";
+		dispbottom "This is your actual PC's MAC address.";
+		dispbottom " ";
+		dispbottom "Source:";
+		if (substr(.mac$, 0, 2) == "AA") {
+			dispbottom "- Generated from network connection";
+		} else {
+			dispbottom "- Provided by client";
+		}
+		dispbottom " ";
+			dispbottom "MAC Format: XX:XX:XX:XX:XX:XX";
+	dispbottom "Length: " + getstrlen(.mac$) + " characters";
+}
+}
+
+//===========================================================================
+// Another simple example - checking other players
+//===========================================================================
+
+prontera,170,186,4	script	MAC Checker	4_F_01,{
+	mes "[MAC Checker]";
+	mes "Enter a character name to check their MAC address:";
+	next;
+	
+	input .name$;
+	
+	if (.name$ == "") {
+		dispbottom "No name entered.";
+		close;
+	}
+	
+	// Get character ID
+	.char_id = getcharid(CHAR_ID_ACCOUNT, .name$);
+	
+	if (.char_id == 0) {
+		dispbottom "Player '" + .name$ + "' not found.";
+		close;
+	}
+	
+	// Get their MAC address
+	.mac$ = getpcmac(.char_id);
+	
+	dispbottom "[MAC Checker]";
+	dispbottom "Player: " + .name$;
+	if (getstrlen(.mac$) == 0) {
+		dispbottom "MAC Address: Not Available";
+		dispbottom " ";
+		dispbottom "This player's MAC address";
+		dispbottom "could not be retrieved.";
+		dispbottom " ";
+		dispbottom "They may need to enable SSO";
+		dispbottom "in their client configuration.";
+		dispbottom " ";
+		dispbottom "Check server console/logs for debug messages!";
+	} else {
+		dispbottom "MAC Address: " + .mac$;
+		dispbottom " ";
+		dispbottom "This is their actual PC's";
+		dispbottom "MAC address.";
+		dispbottom " ";
+			dispbottom "Source: " + (substr(.mac$, 0, 2) == "AA" ? "Network" : "SSO Client");
+}
+}  

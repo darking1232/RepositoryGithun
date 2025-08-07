@@ -59,6 +59,7 @@ struct login_session_data {
 	int32 fd;				///socket of client
 
 	char web_auth_token[WEB_AUTH_TOKEN_LENGTH]; /// web authentication token
+	char mac_address[17];		///MAC address of client PC
 };
 
 #define MAX_SERVERS 5 //max number of mapserv that could be attach
@@ -157,6 +158,7 @@ struct auth_node {
 	uint32 ip;
 	char sex;
 	uint8 clienttype;
+	char mac_address[17];		///MAC address of client PC
 };
 
 ///Accessors

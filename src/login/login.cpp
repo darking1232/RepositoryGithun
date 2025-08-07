@@ -142,6 +142,7 @@ struct auth_node* login_add_auth_node( struct login_session_data* sd, uint32 ip 
 	node->sex = sd->sex;
 	node->ip = ip;
 	node->clienttype = sd->clienttype;
+	safestrncpy( node->mac_address, sd->mac_address, sizeof( node->mac_address ) );
 
 	return node;
 }

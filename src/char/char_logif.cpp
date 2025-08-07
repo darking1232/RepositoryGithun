@@ -290,7 +290,7 @@ int32 chlogif_parse_ackconnect(int32 fd){
 }
 
 int32 chlogif_parse_ackaccreq(int32 fd){
-	if (RFIFOREST(fd) < 21)
+	if (RFIFOREST(fd) < 38)
 		return 0;
 	{
 		struct char_session_data* sd;
@@ -301,13 +301,16 @@ int32 chlogif_parse_ackaccreq(int32 fd){
 		uint8 result = RFIFOB(fd,15);
 		int32 request_id = RFIFOL(fd,16);
 		uint8 clienttype = RFIFOB(fd,20);
-		RFIFOSKIP(fd,21);
+		char mac_address[17];
+		safestrncpy( mac_address, RFIFOCP(fd,21), sizeof( mac_address ) );
+		RFIFOSKIP(fd,38);
 
 		if( session_isActive(request_id) && (sd=(struct char_session_data*)session[request_id]->session_data) &&
 			!sd->auth && sd->account_id == account_id && sd->login_id1 == login_id1 && sd->login_id2 == login_id2 && sd->sex == sex )
 		{
 			int32 client_fd = request_id;
 			sd->clienttype = clienttype;
+			safestrncpy( sd->mac_address, mac_address, sizeof( sd->mac_address ) );
 
 			switch( result )
 			{

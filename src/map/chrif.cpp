@@ -655,10 +655,11 @@ void chrif_authok(int32 fd) {
 	struct auth_node *node;
 	bool changing_mapservers;
 	TBL_PC* sd;
+	char mac_address[17];
 
 	//Check if both servers agree on the struct's size
-	if( RFIFOW(fd,2) - 25 != sizeof(struct mmo_charstatus) ) {
-		ShowError("chrif_authok: Data size mismatch! %d != %" PRIuPTR "\n", RFIFOW(fd,2) - 25, sizeof(struct mmo_charstatus));
+	if( RFIFOW(fd,2) - 42 != sizeof(struct mmo_charstatus) ) { // +17 for MAC address
+		ShowError("chrif_authok: Data size mismatch! %d != %" PRIuPTR "\n", RFIFOW(fd,2) - 42, sizeof(struct mmo_charstatus));
 		return;
 	}
 
@@ -668,7 +669,8 @@ void chrif_authok(int32 fd) {
 	expiration_time = (time_t)(int32)RFIFOL(fd,16);
 	group_id = RFIFOL(fd,20);
 	changing_mapservers = (RFIFOB(fd,24)) > 0;
-	status = (struct mmo_charstatus*)RFIFOP(fd,25);
+	safestrncpy( mac_address, RFIFOCP(fd,25), sizeof( mac_address ) ); // MAC address
+	status = (struct mmo_charstatus*)RFIFOP(fd,42);
 	char_id = status->char_id;
 
 	//Check if we don't already have player data in our server
@@ -692,6 +694,7 @@ void chrif_authok(int32 fd) {
 	}
 
 	sd = node->sd;
+	safestrncpy( node->mac_address, mac_address, sizeof( node->mac_address ) );
 
 	if( global_core->is_running() &&
 		node->char_dat == nullptr &&

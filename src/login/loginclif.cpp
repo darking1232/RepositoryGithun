@@ -273,7 +273,15 @@ static bool logclif_parse_reqauth_raw( int32 fd, login_session_data& sd ){
 	safestrncpy( sd.userid, p->username, sizeof( sd.userid ) );
 	sd.clienttype = p->clienttype;
 
-	ShowStatus( "Request for connection of %s (ip: %s)\n", sd.userid, ip );
+	// Extract MAC address if present in packet type
+	if constexpr (std::is_same_v<P, PACKET_CA_LOGIN_PCBANG> || 
+				  std::is_same_v<P, PACKET_CA_LOGIN_CHANNEL>) {
+		safestrncpy( sd.mac_address, p->mac, sizeof( sd.mac_address ) );
+		ShowStatus( "Request for connection of %s (ip: %s, mac: %s)\n", sd.userid, ip, sd.mac_address );
+	} else {
+		ShowStatus( "Request for connection of %s (ip: %s)\n", sd.userid, ip );
+	}
+	
 	safestrncpy( sd.passwd, p->password, PASSWD_LENGTH );
 
 	if( login_config.use_md5_passwds ){
@@ -304,7 +312,14 @@ static bool logclif_parse_reqauth_md5( int32 fd, login_session_data& sd ){
 	safestrncpy( sd.userid, p->username, sizeof( sd.userid ) );
 	sd.clienttype = p->clienttype;
 
-	ShowStatus( "Request for connection (passwdenc mode) of %s (ip: %s)\n", sd.userid, ip );
+	// Extract MAC address if present in packet type
+	if constexpr (std::is_same_v<P, PACKET_CA_LOGIN4>) {
+		safestrncpy( sd.mac_address, p->mac, sizeof( sd.mac_address ) );
+		ShowStatus( "Request for connection (passwdenc mode) of %s (ip: %s, mac: %s)\n", sd.userid, ip, sd.mac_address );
+	} else {
+		ShowStatus( "Request for connection (passwdenc mode) of %s (ip: %s)\n", sd.userid, ip );
+	}
+	
 	bin2hex( sd.passwd, p->passwordMD5, sizeof( p->passwordMD5 ) ); // raw binary data here!
 
 	sd.passwdenc = PASSWORDENC;
@@ -338,7 +353,14 @@ static bool logclif_parse_reqauth_sso( int32 fd, login_session_data& sd ){
 	safestrncpy( sd.userid, p->username, sizeof( sd.userid ) );
 	sd.clienttype = p->clienttype;
 
-	ShowStatus( "Request for connection (SSO mode) of %s (ip: %s)\n", sd.userid, ip );
+	// Extract MAC address if present in packet type
+	if constexpr (std::is_same_v<P, PACKET_CA_SSO_LOGIN_REQ>) {
+		safestrncpy( sd.mac_address, p->mac, sizeof( sd.mac_address ) );
+		ShowStatus( "Request for connection (SSO mode) of %s (ip: %s, mac: %s)\n", sd.userid, ip, sd.mac_address );
+	} else {
+		ShowStatus( "Request for connection (SSO mode) of %s (ip: %s)\n", sd.userid, ip );
+	}
+	
 	// Shinryo: For the time being, just use token as password.
 	safestrncpy( sd.passwd, p->token, token_length + 1 );
 
