@@ -1948,7 +1948,25 @@ int32 intif_parse_ChangeNameOk(int32 fd)
 		return 0;
 
 	switch (RFIFOB(fd,10)) {
-	case 0: //Players [NOT SUPPORTED YET]
+	case 0: //Players
+		{
+			int32 success = RFIFOB(fd,11);
+			if (success) {
+				// Update the player's name in session data
+				const char* new_name = RFIFOCP(fd,12);
+				safestrncpy(sd->status.name, new_name, NAME_LENGTH);
+				
+							// Log the name change
+			if (battle_config.etc_log)
+				ShowInfo("Name change: %s -> %s (AID: %d, CID: %d)\n", 
+					sd->status.name, new_name, sd->status.account_id, sd->status.char_id);
+				} else {
+			// Name change failed
+			if (battle_config.etc_log)
+				ShowError("Name change failed for character %s (AID: %d, CID: %d) - Check char server logs for error code\n", 
+					sd->status.name, sd->status.account_id, sd->status.char_id);
+		}
+		}
 		break;
 	case 1: //Pets
 		pet_change_name_ack(sd, RFIFOCP(fd,12), RFIFOB(fd,11));

@@ -1,0 +1,225 @@
+//===== rAthena Script ======================================= 
+//= Name and Gender Change NPC
+//===== By: ================================================== 
+//= Custom Script
+//===== Current Version: ===================================== 
+//= 1.0
+//===== Compatible With: ===================================== 
+//= rAthena Project
+//===== Description: ========================================= 
+//= Allows players to change their name and gender with proper validation
+//= Name changes require reconnection and update the entire database
+//= Gender changes reset hair, clothes color and hair style
+//===== Additional Comments: ================================= 
+//= 1.0 First version.
+//============================================================ 
+
+prontera,162,183,5	script	Name_Gender_Changer	757,{
+	mes "[Name & Gender Changer]";
+	mes "Welcome! I can help you change";
+	mes "your character's name or gender.";
+	mes "What would you like to do?";
+	next;
+	
+	switch(select("Change Name:Change Gender:Cancel")) {
+	case 1:
+		goto L_ChangeName;
+	case 2:
+		goto L_ChangeGender;
+	case 3:
+		mes "[Name & Gender Changer]";
+		mes "Come back anytime if you";
+		mes "change your mind!";
+		close;
+	}
+	
+L_ChangeName:
+	// Check if character is in a party
+	if(getcharid(1) > 0) {
+		mes "[Name & Gender Changer]";
+		mes "Sorry, but you cannot change your name";
+		mes "while you are in a party.";
+		mes "Please leave your party first and try again.";
+		close;
+	}
+	
+	// Check if character is in a guild
+	if(getcharid(2) > 0) {
+		mes "[Name & Gender Changer]";
+		mes "Sorry, but you cannot change your name";
+		mes "while you are in a guild.";
+		mes "Please leave your guild first and try again.";
+		close;
+	}
+	
+	// Check if character has already changed name
+	if(getd("@name_changed_" + getcharid(CHAR_ID_ACCOUNT))) {
+		mes "[Name & Gender Changer]";
+		mes "Sorry, but you have already";
+		mes "changed your name once.";
+		mes "Name changes are limited to";
+		mes "one time per character.";
+		close;
+	}
+	
+	mes "[Name & Gender Changer]";
+	mes "I can help you change your name.";
+	mes "Please note the following rules:";
+	mes "- No spaces or special characters";
+	mes "- Minimum 4 characters";
+	mes "- Maximum 20 characters";
+	mes "- You will need to reconnect after the change";
+	mes "- The change will update the entire database";
+	
+	next;
+	mes "[Name & Gender Changer]";
+	mes "- ^FF0000Name changes are allowed only once!^000000";
+	next;
+	
+	mes "[Name & Gender Changer]";
+	mes "Are you sure you want to change your name?";
+	mes "Current name: ^FF0000" + strcharinfo(0) + "^000000";
+	next;
+	
+	if(select("Yes, change my name:No, cancel") == 2) {
+		mes "[Name & Gender Changer]";
+		mes "Name change cancelled.";
+		close;
+	}
+	
+	mes "[Name & Gender Changer]";
+	mes "Please enter your new name:";
+	mes "(4-20 characters, no spaces or special characters)";
+	next;
+	
+	input .@newname$,4,20;
+	
+	// Validate name length
+	if(getstrlen(.@newname$) < 4) {
+		mes "[Name & Gender Changer]";
+		mes "Error: Name must be at least 4 characters long.";
+		close;
+	}
+	
+	if(getstrlen(.@newname$) > 20) {
+		mes "[Name & Gender Changer]";
+		mes "Error: Name cannot exceed 20 characters.";
+		close;
+	}
+	
+	// Basic character validation using a simple approach
+	// Check if name contains only letters and numbers by checking each character
+	.@i = 0;
+	while(.@i < getstrlen(.@newname$)) {
+		.@char_code = getchar(.@newname$, .@i);
+		// Check if character is not a letter (A-Z: 65-90, a-z: 97-122) or number (0-9: 48-57)
+		if((.@char_code < 48) || (.@char_code > 57 && .@char_code < 65) || 
+		   (.@char_code > 90 && .@char_code < 97) || (.@char_code > 122)) {
+			mes "[Name & Gender Changer]";
+			mes "Error: Name contains invalid characters.";
+			mes "Only letters and numbers are allowed.";
+			close;
+		}
+		.@i++;
+	}
+	
+	// Check if name is the same as current
+	if(.@newname$ == strcharinfo(0)) {
+		mes "[Name & Gender Changer]";
+		mes "Error: New name is the same as your current name.";
+		close;
+	}
+	
+	mes "[Name & Gender Changer]";
+	mes "You want to change your name from:";
+	mes "^FF0000" + strcharinfo(0) + "^000000";
+	mes "to: ^FF0000" + .@newname$ + "^000000";
+	mes "Is this correct?";
+	next;
+	
+	if(select("Yes, proceed with name change:No, cancel") == 2) {
+		mes "[Name & Gender Changer]";
+		mes "Name change cancelled.";
+		close;
+	}
+	
+	// Perform name change using built-in function
+	mes "[Name & Gender Changer]";
+	mes "Processing name change...";
+	mes "Please wait...";
+	next;
+	
+	// Use the built-in name change function
+	// This will update the database and require reconnection
+	changename(.@newname$);
+	
+	// Set flag to prevent future name changes
+	setd "@name_changed_" + getcharid(CHAR_ID_ACCOUNT), 1;
+	
+	mes "[Name & Gender Changer]";
+	mes "Name change completed!";
+	mes "You will be disconnected to apply the changes.";
+	mes "Please log back in to see your new name.";
+	mes "^FF0000Note: You cannot change your name again.^000000";
+	close2;
+	atcommand "@kick " + strcharinfo(0);
+	end;
+	
+L_ChangeGender:
+	// Check if character is in a party
+	if(getcharid(1) > 0) {
+		mes "[Name & Gender Changer]";
+		mes "Sorry, but you cannot change your gender";
+		mes "while you are in a party.";
+		mes "Please leave your party first and try again.";
+		close;
+	}
+	
+	// Check if character is in a guild
+	if(getcharid(2) > 0) {
+		mes "[Name & Gender Changer]";
+		mes "Sorry, but you cannot change your gender";
+		mes "while you are in a guild.";
+		mes "Please leave your guild first and try again.";
+		close;
+	}
+	
+	mes "[Name & Gender Changer]";
+	mes "I can help you change your gender.";
+	mes "Please note the following:";
+	mes "- Your hair style and color will be reset";
+	mes "- Your clothes color will be reset";
+	mes "- You will need to reconnect after the change";
+	mes "- The change will update the entire database";
+	next;
+	
+	mes "[Name & Gender Changer]";
+	mes "Current gender: ^FF0000" + (getcharid(CHAR_SEX) == 0 ? "Male" : "Female") + "^000000";
+	mes "New gender will be: ^00FF00" + (getcharid(CHAR_SEX) == 0 ? "Female" : "Male") + "^000000";
+	mes "Are you sure you want to change your gender?";
+	next;
+	
+	if(select("Yes, change my gender:No, cancel") == 2) {
+		mes "[Name & Gender Changer]";
+		mes "Gender change cancelled.";
+		close;
+	}
+	
+	mes "[Name & Gender Changer]";
+	mes "Processing gender change...";
+	mes "Please wait...";
+	next;
+	
+	// Perform gender change using built-in function
+	// This will update the database and require reconnection
+	atcommand "@changesex";
+	
+	mes "[Name & Gender Changer]";
+	mes "Gender change completed!";
+	mes "You will be disconnected to apply the changes.";
+	mes "Please log back in to see your new gender.";
+	mes "Note: Your hair style, hair color, and clothes color have been reset.";
+	close2;
+	atcommand "@kick " + strcharinfo(0);
+	end;
+}

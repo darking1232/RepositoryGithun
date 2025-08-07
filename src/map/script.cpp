@@ -17482,6 +17482,49 @@ BUILDIN_FUNC(charat) {
 }
 
 //=======================================================
+// getchar <string>, <index>
+// Returns the ASCII code of the character at the specified position
+//-------------------------------------------------------
+BUILDIN_FUNC(getchar)
+{
+	const char *str = script_getstr(st,2);
+	int32 pos = script_getnum(st,3);
+
+	if( pos >= 0 && (uint32)pos < strlen(str) ) {
+		script_pushint(st, (int32)str[pos]); // Return ASCII code as integer
+	} else {
+		script_pushint(st, 0); // Return 0 for invalid position
+	}
+	return SCRIPT_CMD_SUCCESS;
+}
+
+//=======================================================
+// changename <new_name>
+// Changes the character's name (requires reconnection)
+//-------------------------------------------------------
+BUILDIN_FUNC(changename)
+{
+	map_session_data *sd;
+	const char *new_name = script_getstr(st,2);
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// Check if character is online
+	if (sd->status.account_id == 0) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// Request name change through inter-server communication
+	int32 result = intif_rename(sd, 0, (char*)new_name);
+	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+//=======================================================
 // setchar <string>, <char>, <index>
 //-------------------------------------------------------
 BUILDIN_FUNC(setchar)
@@ -28506,6 +28549,8 @@ BUILDIN_DEF(plagiarism, "iii"),
 	BUILDIN_DEF(getstrlen,"s"), //strlen [Valaris]
 	BUILDIN_DEF(charisalpha,"si"), //isalpha [Valaris]
 	BUILDIN_DEF(charat,"si"),
+	BUILDIN_DEF(getchar,"si"), //getchar - returns ASCII code of character at position
+	BUILDIN_DEF(changename,"s"), //changename - changes character name
 	BUILDIN_DEF(setchar,"ssi"),
 	BUILDIN_DEF(insertchar,"ssi"),
 	BUILDIN_DEF(delchar,"si"),

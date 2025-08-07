@@ -9752,6 +9752,38 @@ Example:
 
 ---------------------------------------
 
+*getchar(<string>,<index>)
+
+Returns the ASCII code of the character at the specified position as an integer.
+If the index is out of range, returns 0. The first character of a string is index 0.
+
+This function is useful for character validation by checking ASCII code ranges:
+- Numbers (0-9): ASCII 48-57
+- Uppercase letters (A-Z): ASCII 65-90
+- Lowercase letters (a-z): ASCII 97-122
+- Space: ASCII 32
+
+Example:
+	getchar("Hello", 0); //returns 72 (ASCII code for 'H')
+	getchar("Test123", 4); //returns 49 (ASCII code for '1')
+
+---------------------------------------
+*changename(<new_name>)
+
+Changes the character's name to the specified new name. This function requires
+the character to be online and will trigger a name change request through the
+character server. The character will need to reconnect to see the new name.
+
+This function returns 1 if the request was sent successfully, 0 otherwise.
+
+Note: Character name changes are subject to server configuration restrictions
+and may require the character to leave guilds/parties depending on server settings.
+
+Example:
+	changename("NewName"); //changes character name to "NewName"
+
+---------------------------------------
+
 *setchar(<string>,<char>,<index>)
 
 Returns the original string with the char at the specified index set to the

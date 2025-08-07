@@ -1381,12 +1381,50 @@ int32 mapif_parse_NameChangeRequest(int32 fd)
 			return 0;
 		}
 	}
-	//TODO: type holds the type of object to rename.
-	//If it were a player, it needs to have the guild information and db information
-	//updated here, because changing it on the map won't make it be saved [Skotlex]
 
-	//name allowed.
-	mapif_namechange_ack(fd, account_id, char_id, type, 1, name);
+	// Handle different types of rename requests
+	switch (type) {
+	case 0: // Player character rename
+		{
+			// Find the session data for this account
+			struct char_session_data* sd = nullptr;
+			int32 i;
+			ARR_FIND(0, fd_max, i, session[i] && (sd = (struct char_session_data*)session[i]->session_data) && sd->account_id == account_id);
+			
+			if (sd == nullptr) {
+				// Player not found, send failure
+				mapif_namechange_ack(fd, account_id, char_id, type, 0, name);
+				return 0;
+			}
+			
+			// Set the new name in the session data
+			safestrncpy(sd->new_name, name, NAME_LENGTH);
+			
+			// Perform the actual rename operation
+			int32 result = char_rename_char_sql(sd, char_id);
+			
+			// Log the specific error for debugging
+			if (result != 0) {
+				ShowError("Name change failed for character %s (AID: %d, CID: %d) - Error code: %d\n", 
+					sd->new_name, account_id, char_id, result);
+			}
+			
+			// Send acknowledgment based on result
+			// 0 = success, others = various error codes
+			mapif_namechange_ack(fd, account_id, char_id, type, (result == 0) ? 1 : 0, name);
+		}
+		break;
+	case 1: // Pet rename
+	case 2: // Homunculus rename
+		// These are handled by the map server
+		mapif_namechange_ack(fd, account_id, char_id, type, 1, name);
+		break;
+	default:
+		// Unknown type
+		mapif_namechange_ack(fd, account_id, char_id, type, 0, name);
+		break;
+	}
+	
 	return 0;
 }
 
