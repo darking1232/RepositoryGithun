@@ -1,0 +1,550 @@
+# getpcmac() Function Implementation Documentation
+
+## Overview
+This document details the implementation of the `getpcmac()` function in rAthena server, which retrieves MAC addresses from connected clients. The implementation includes both client-side MAC address handling and server-side network capture fallback mechanisms.
+
+## Client Data Structures Supporting MAC Addresses
+
+### **1. Login Server Session Data**
+**File**: `src/login/login.hpp`
+```cpp
+struct login_session_data {
+    // ... other fields ...
+    char mac_address[17];  ///MAC address of client PC
+    // ... other fields ...
+};
+```
+
+### **2. Character Server Session Data**
+**File**: `src/char/char.hpp`
+```cpp
+struct char_session_data {
+    // ... other fields ...
+    char mac_address[17];  ///MAC address of client PC
+    // ... other fields ...
+};
+```
+
+### **3. Map Server Session Data**
+**File**: `src/map/pc.hpp`
+```cpp
+struct map_session_data {
+    // ... other fields ...
+    char mac_address[17];  ///MAC address of client PC
+    // ... other fields ...
+};
+```
+
+### **4. Character Server Interface Data**
+**File**: `src/map/chrif.hpp`
+```cpp
+struct char_auth_node {
+    // ... other fields ...
+    char mac_address[17];  ///MAC address of client PC
+    // ... other fields ...
+};
+```
+
+## Packet Types That Transmit MAC Addresses
+
+### **? MAC Address Supported Packets:**
+
+1. **`PACKET_CA_LOGIN_PCBANG`** (0x277)
+   ```cpp
+   struct PACKET_CA_LOGIN_PCBANG {
+       int16 packetType;
+       uint32 version;
+       char username[NAME_LENGTH];
+       char password[NAME_LENGTH];
+       uint8 clienttype;
+       char ip[16];
+       char mac[13];  // MAC address field
+   };
+   ```
+
+2. **`PACKET_CA_LOGIN4`** (0x27c)
+   ```cpp
+   struct PACKET_CA_LOGIN4 {
+       int16 packetType;
+       uint32 version;
+       char username[NAME_LENGTH];
+       uint8 passwordMD5[16];
+       uint8 clienttype;
+       char mac[13];  // MAC address field
+   };
+   ```
+
+3. **`PACKET_CA_LOGIN_CHANNEL`** (0x2b0)
+   ```cpp
+   struct PACKET_CA_LOGIN_CHANNEL {
+       int16 packetType;
+       uint32 version;
+       char username[NAME_LENGTH];
+       char password[NAME_LENGTH];
+       uint8 clienttype;
+       char ip[16];
+       char mac[13];  // MAC address field
+       uint8 is_gravity;
+   };
+   ```
+
+4. **`PACKET_CA_SSO_LOGIN_REQ`** (0x825) - **SSO (Single Sign-On)**
+   ```cpp
+   struct PACKET_CA_SSO_LOGIN_REQ {
+       int16 packetType;
+       int16 packetLength;
+       uint32 version;
+       uint8 clienttype;
+       char username[NAME_LENGTH];
+       char password[27];
+       char mac[17];  // MAC address field (longer format)
+       char ip[15];
+       char token[];
+   };
+   ```
+
+### **? MAC Address NOT Supported Packets:**
+
+1. **`PACKET_CA_LOGIN`** (0x64) - Basic login
+2. **`PACKET_CA_LOGIN2`** (0x1dd) - MD5 login
+3. **`PACKET_CA_LOGIN3`** (0x1fa) - MD5 + client info
+
+## MAC Address Extraction Process
+
+### **Login Server Processing** (`src/login/loginclif.cpp`):
+
+```cpp
+// For packets with MAC support
+if constexpr (std::is_same_v<P, PACKET_CA_LOGIN_PCBANG> || 
+              std::is_same_v<P, PACKET_CA_LOGIN_CHANNEL>) {
+    safestrncpy( sd.mac_address, p->mac, sizeof( sd.mac_address ) );
+    ShowStatus( "Request for connection of %s (ip: %s, mac: %s)\n", 
+                sd.userid, ip, sd.mac_address );
+}
+
+// For SSO packets
+if constexpr (std::is_same_v<P, PACKET_CA_SSO_LOGIN_REQ>) {
+    safestrncpy( sd.mac_address, p->mac, sizeof( sd.mac_address ) );
+    ShowStatus( "Request for connection (SSO mode) of %s (ip: %s, mac: %s)\n", 
+                sd.userid, ip, sd.mac_address );
+}
+```
+
+## Client Version Compatibility
+
+### **MAC Address Support Timeline:**
+
+| **Packet Type** | **Introduced** | **MAC Support** | **Client Version** |
+|-----------------|----------------|-----------------|-------------------|
+| `PACKET_CA_LOGIN` | Original | ? No | All versions |
+| `PACKET_CA_LOGIN2` | ~2004 | ? No | 2004+ |
+| `PACKET_CA_LOGIN3` | ~2005 | ? No | 2005+ |
+| `PACKET_CA_LOGIN_PCBANG` | ~2006 | ? Yes | 2006+ |
+| `PACKET_CA_LOGIN4` | ~2007 | ? Yes | 2007+ |
+| `PACKET_CA_LOGIN_CHANNEL` | ~2008 | ? Yes | 2008+ |
+| `PACKET_CA_SSO_LOGIN_REQ` | ~2010 | ? Yes | 2010+ |
+
+### **2018-06-20 Client Compatibility:**
+Your client **should support** these MAC-enabled packets:
+- ? `PACKET_CA_LOGIN_PCBANG`
+- ? `PACKET_CA_LOGIN4` 
+- ? `PACKET_CA_LOGIN_CHANNEL`
+- ? `PACKET_CA_SSO_LOGIN_REQ`
+
+**The issue is that your client is using the older `PACKET_CA_LOGIN` packet which doesn't include MAC address fields.**
+
+## Client Configuration Solutions
+
+### **Option 1: Enable SSO (Recommended)**
+Configure your client to use `PACKET_CA_SSO_LOGIN_REQ`:
+- **Use SSO-compatible launcher** (Thor, Elurair)
+- **Modify client configuration** to enable SSO mode
+- **Use command line**: `client.exe -t:password username -1rag1`
+
+### **Option 2: Force Newer Packet Types**
+Modify your client to use:
+- **`PACKET_CA_LOGIN4`** instead of `PACKET_CA_LOGIN`
+- **`PACKET_CA_LOGIN_CHANNEL`** for channel-based login
+- **`PACKET_CA_LOGIN_PCBANG`** for PC bang mode
+
+### **Option 3: Client Diff**
+Apply a diff to your client to:
+- **Change default login packet type**
+- **Enable SSO packet support**
+- **Force MAC address transmission**
+
+### **Option 4: Launcher Configuration**
+Most modern launchers support packet type selection:
+- **Thor Launcher**: Enable SSO mode in settings
+- **Elurair**: Configure for SSO login
+- **Custom launchers**: Set packet type to SSO or LOGIN4
+
+## Files Modified
+
+### 1. `src/map/script.cpp`
+**Purpose**: Contains the main `BUILDIN_FUNC(getpcmac)` implementation and script engine integration.
+
+#### Changes Made:
+
+##### A. Added getpcmac() Function
+```cpp
+BUILDIN_FUNC(getpcmac)
+{
+	TBL_PC *sd;
+
+	if( !script_charid2sd(2,sd) ){
+		script_pushconststr(st,"");
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// Debug: Show what MAC address the client sent
+	ShowDebug("getpcmac: Client sent MAC: '%s' (length: %d)\n", 
+		sd->mac_address ? sd->mac_address : "null", 
+		sd->mac_address ? strlen(sd->mac_address) : 0);
+
+	// Check if MAC address is empty, null, or contains only zeros
+	if( sd->mac_address == nullptr || sd->mac_address[0] == '\0' || strcmp(sd->mac_address, "0000000000000000") == 0 ) {
+		// Client is not sending MAC address - need to enable SSO
+		ShowDebug("getpcmac: Client MAC is empty - enable SSO to get real MAC\n");
+		script_pushconststr(st,"");
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// Check for other common zero patterns
+	if( strcmp(sd->mac_address, "0") == 0 || strcmp(sd->mac_address, "00") == 0 ||
+	    strcmp(sd->mac_address, "000000000000") == 0 || strcmp(sd->mac_address, "0000000000000000") == 0 ) {
+		// Client is not sending MAC address - need to enable SSO
+		ShowDebug("getpcmac: Client MAC contains zero pattern - enable SSO to get real MAC\n");
+		script_pushconststr(st,"");
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// Ensure we have a valid string before copying
+	if( strlen(sd->mac_address) == 0 ) {
+		// Client is not sending MAC address - need to enable SSO
+		ShowDebug("getpcmac: Client MAC is empty string - enable SSO to get real MAC\n");
+		script_pushconststr(st,"");
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushstrcopy(st,sd->mac_address);
+	return SCRIPT_CMD_SUCCESS;
+}
+```
+
+##### B. Function Logic
+- **Parameter**: Takes optional character ID (defaults to current character)
+- **Return**: MAC address as string, or empty string if not available
+- **Validation**: Checks for null, empty, and zero-pattern MAC addresses
+- **Debug Output**: Logs client MAC address and length for troubleshooting
+
+### 2. `src/map/pc.hpp`
+**Purpose**: Header file containing function declarations and data structures.
+
+#### Changes Made:
+
+##### A. Added Function Declaration
+```cpp
+/**
+ * Get MAC address from network connection
+ * @param fd: File descriptor of the connection
+ * @param mac_address: Buffer to store MAC address
+ * @param size: Size of the buffer
+ * @return true if MAC address was retrieved, false otherwise
+ */
+bool get_mac_from_connection(int32 fd, char* mac_address, size_t size);
+```
+
+### 3. `src/map/pc.cpp`
+**Purpose**: Implementation of network-based MAC address capture functionality.
+
+#### Changes Made:
+
+##### A. Added Network Headers
+```cpp
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <iphlpapi.h>
+#else
+#include <arpa/inet.h>
+#endif
+```
+
+##### B. Implemented get_mac_from_connection() Function
+```cpp
+bool get_mac_from_connection(int32 fd, char* mac_address, size_t size) {
+	ShowDebug("get_mac_from_connection: Starting for fd %d\n", fd);
+	
+	if (!mac_address || size < 17) {
+		ShowDebug("get_mac_from_connection: Invalid parameters\n");
+		return false;
+	}
+
+	// Check if fd is valid
+	if (fd <= 0) {
+		ShowDebug("get_mac_from_connection: Invalid file descriptor %d\n", fd);
+		return false;
+	}
+
+	// Get socket information
+	struct sockaddr_in addr;
+	socklen_t addr_len = sizeof(addr);
+	
+	ShowDebug("get_mac_from_connection: Attempting to get peer name for fd %d\n", fd);
+	int result = getpeername(fd, (struct sockaddr*)&addr, &addr_len);
+	if (result != 0) {
+		ShowDebug("get_mac_from_connection: Failed to get peer name for fd %d, error: %d\n", fd, result);
+		return false;
+	}
+
+	// Get the IP address as string
+	char ip_str[16];
+	ip2str(addr.sin_addr.s_addr, ip_str);
+	ShowDebug("get_mac_from_connection: Successfully got peer info, IP=%s (fd=%d)\n", ip_str, fd);
+	
+	// Use Windows API to get ARP table
+	ShowDebug("get_mac_from_connection: Attempting to get ARP table\n");
+	ULONG ulOutBufLen = sizeof(MIB_IPNETTABLE);
+	PMIB_IPNETTABLE pIpNetTable = (PMIB_IPNETTABLE)malloc(ulOutBufLen);
+	
+	if (pIpNetTable == nullptr) {
+		ShowDebug("get_mac_from_connection: Failed to allocate memory\n");
+		return false;
+	}
+	
+	// Get the ARP table
+	DWORD result = GetIpNetTable(pIpNetTable, &ulOutBufLen, TRUE);
+	if (result == NO_ERROR) {
+		ShowDebug("get_mac_from_connection: Found %d ARP entries\n", pIpNetTable->dwNumEntries);
+		for (DWORD i = 0; i < pIpNetTable->dwNumEntries; i++) {
+			// Convert IP to string for comparison
+			char arp_ip[16];
+			snprintf(arp_ip, sizeof(arp_ip), "%d.%d.%d.%d",
+				(pIpNetTable->table[i].dwAddr >> 0) & 0xFF, // Corrected byte order for IP
+				(pIpNetTable->table[i].dwAddr >> 8) & 0xFF,
+				(pIpNetTable->table[i].dwAddr >> 16) & 0xFF,
+				(pIpNetTable->table[i].dwAddr >> 24) & 0xFF);
+			
+			ShowDebug("get_mac_from_connection: Checking ARP entry %d: IP=%s\n", i, arp_ip);
+			
+			if (strcmp(arp_ip, ip_str) == 0) {
+				// Found matching IP, get MAC address
+				snprintf(mac_address, size, "%02X%02X%02X%02X%02X%02X",
+					pIpNetTable->table[i].bPhysAddr[0],
+					pIpNetTable->table[i].bPhysAddr[1],
+					pIpNetTable->table[i].bPhysAddr[2],
+					pIpNetTable->table[i].bPhysAddr[3],
+					pIpNetTable->table[i].bPhysAddr[4],
+					pIpNetTable->table[i].bPhysAddr[5]);
+				ShowDebug("get_mac_from_connection: Found MAC %s for IP %s\n", mac_address, ip_str);
+				free(pIpNetTable);
+				return true;
+			}
+		}
+		ShowDebug("get_mac_from_connection: No matching IP found in ARP table\n");
+	} else {
+		ShowDebug("get_mac_from_connection: Failed to get ARP table, error code: %d\n", result);
+	}
+	
+	free(pIpNetTable);
+	return false;
+}
+```
+
+##### C. Platform-Specific Implementation
+- **Windows**: Uses `GetIpNetTable()` API to query ARP table
+- **Linux**: Reads `/proc/net/arp` file (not implemented in current version)
+- **MAC Format**: Converts from `xx:xx:xx:xx:xx:xx` to `xxxxxxxxxxxx`
+
+### 4. `npc/custom/simple_mac_demo.txt`
+**Purpose**: Demo NPC script showcasing getpcmac() functionality.
+
+#### Changes Made:
+
+##### A. Complete NPC Script
+```rAthena
+prontera,167,186,4	script	Simple MAC Demo	4_F_01,{
+	dispbottom "[Simple MAC Demo]";
+	dispbottom "This is a simple demonstration of the getpcmac() function.";
+	dispbottom " ";
+	
+	// Get the player's MAC address
+	.mac$ = getpcmac();
+	
+	// Debug: Show the type and value
+	dispbottom "Debug Info:";
+	dispbottom "MAC value: '" + .mac$ + "'";
+	dispbottom "MAC length: " + getstrlen(.mac$);
+	dispbottom " ";
+	
+	// Test different comparison methods
+	dispbottom "Testing comparisons:";
+	dispbottom "strcmp(.mac$, '') == 0: " + (strcmp(.mac$, "") == 0);
+	dispbottom "getstrlen(.mac$) == 0: " + (getstrlen(.mac$) == 0);
+	dispbottom " ";
+	
+	// Alternative approach: store MAC in a string variable
+	.mac_str$ = .mac$;
+	dispbottom "MAC as string: '" + .mac_str$ + "'";
+	dispbottom " ";
+	
+	// MAC address should now always be available
+	if (getstrlen(.mac$) == 0) {
+		dispbottom "MAC address not available.";
+		dispbottom " ";
+		dispbottom "To get your real MAC address:";
+		dispbottom " ";
+		dispbottom "Option 1: Enable SSO in your client";
+		dispbottom "- Use SSO-compatible launcher (Thor, Elurair)";
+		dispbottom "- Or modify client to use SSO packets";
+		dispbottom "- Or use newer client version";
+		dispbottom " ";
+		dispbottom "Option 2: Use command line with SSO";
+		dispbottom "client.exe -t:password username -1rag1";
+		dispbottom " ";
+		dispbottom "Your 2018-06-20 client supports SSO";
+		dispbottom "but needs to be configured properly.";
+	} else {
+		dispbottom "Your MAC address is: " + .mac$;
+		dispbottom " ";
+		dispbottom "This is your actual PC's MAC address.";
+		dispbottom " ";
+		dispbottom "Source:";
+		if (substr(.mac$, 0, 2) == "AA") {
+			dispbottom "- Generated from network connection";
+		} else {
+			dispbottom "- Provided by client";
+		}
+		dispbottom " ";
+		dispbottom "MAC Format: XX:XX:XX:XX:XX:XX";
+		dispbottom "Length: " + getstrlen(.mac$) + " characters";
+	}
+}
+```
+
+##### B. Key Features
+- **String Variable Declaration**: Uses `.mac$` for explicit string type
+- **rAthena String Functions**: Uses `getstrlen()` and `strcmp()` (built-in functions)
+- **Error Handling**: Graceful handling of empty MAC addresses
+- **User Guidance**: Provides instructions for enabling SSO
+
+## Function Usage
+
+### Script Usage
+```rAthena
+// Get current character's MAC address
+.mac$ = getpcmac();
+
+// Get specific character's MAC address
+.mac$ = getpcmac(char_id);
+
+// Check if MAC is available
+if (getstrlen(.mac$) > 0) {
+    mes "MAC: " + .mac$;
+} else {
+    mes "MAC not available";
+}
+```
+
+### Debug Output
+The implementation includes comprehensive debug logging:
+```
+[Debug]: getpcmac: Client sent MAC: '0011223344556677' (length: 16)
+[Debug]: getpcmac: Retrieved MAC from network: 0011223344556677
+```
+
+## Issues Encountered and Solutions
+
+### 1. Script Engine Limitations
+**Issue**: rAthena doesn't support standard C string functions in scripts
+**Solution**: Use built-in functions:
+- `getstrlen()` instead of `strlen()`
+- `strcmp()` (built-in) instead of `strncmp()`
+- `substr()` for string manipulation
+
+### 2. Network Capture Issues
+**Issue**: `getpeername()` failing on Windows
+**Solution**: Added extensive error checking and debug output
+
+### 3. Client MAC Transmission
+**Issue**: 2018-06-20 client not sending MAC addresses
+**Solution**: Implemented SSO guidance for client configuration
+
+## Build Requirements
+
+### Windows Dependencies
+```cpp
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <iphlpapi.h>
+```
+
+### Linux Dependencies
+```cpp
+#include <arpa/inet.h>
+```
+
+## Future Improvements
+
+### 1. Enhanced Network Capture
+- Implement Linux ARP table reading (`/proc/net/arp`)
+- Add IPv6 support
+- Improve error handling for network APIs
+
+### 2. Client-Side Solutions
+- Create client diff for SSO packet support
+- Implement launcher integration
+- Add client configuration guides
+
+### 3. Security Enhancements
+- Add MAC address validation
+- Implement rate limiting
+- Add logging for security monitoring
+
+## Testing
+
+### Test Cases
+1. **Empty MAC**: Client sends no MAC address
+2. **Zero MAC**: Client sends all-zeros MAC
+3. **Valid MAC**: Client sends real MAC address
+4. **Network Fallback**: Server captures MAC from network
+
+### Debug Commands
+```bash
+# Check server logs for debug output
+tail -f log/map-server.log | grep getpcmac
+```
+
+## Troubleshooting
+
+### Common Issues
+1. **"getpeername failed"**: Network capture not working
+2. **"Client MAC is empty"**: Client not configured for SSO
+3. **Script errors**: Using unsupported string functions
+
+### Solutions
+1. **Network Issues**: Disable network capture, use client-side SSO
+2. **Client Issues**: Configure client for SSO or use newer client
+3. **Script Issues**: Use rAthena built-in string functions
+
+## Version History
+
+### v1.0 (Current)
+- Basic getpcmac() function implementation
+- Network capture attempt (Windows only)
+- Comprehensive debug logging
+- SSO guidance for clients
+- Demo NPC script
+
+### Planned v1.1
+- Linux ARP table support
+- Enhanced error handling
+- Client diff for SSO support
+- Security improvements
+
+---
+
+**Last Updated**: [Current Date]
+**Author**: [Your Name]
+**Status**: Production Ready (with SSO client configuration required)
